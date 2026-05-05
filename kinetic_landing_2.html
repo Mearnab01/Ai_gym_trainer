@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KINETIC — AI-Powered Fitness Coach</title>
+  <meta name="description" content="Real-time AI gym coach. Pose detection, live form feedback, and voice coaching — right in your browser."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,700;0,800;1,700&family=Cormorant+Garamond:ital,wght@1,400;1,500&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+
+<style>
+/* ─── TOKENS ─────────────────────────────────────────── */
+:root{
+  --bg:    #09080A;
+  --bg2:   #0F0D0B;
+  --bg3:   #151210;
+  --bg4:   #1C1812;
+  --bdr:   #211D17;
+  --bdr2:  #2C2619;
+  --bdr3:  #3A3122;
+
+  /* GOLD — the brand accent */
+  --g:     #C9A84C;
+  --gd:    rgba(201,168,76,.10);
+  --gm:    rgba(201,168,76,.22);
+  --gb:    rgba(201,168,76,.35);
+
+  /* KINETIC logo green — never changes */
+  --logo:  #4ADE80;
+
+  --t1:    #F2EDE4;
+  --t2:    #8A7D6A;
+  --t3:    #4A4235;
+
+  --fd:    'Barlow Condensed', sans-serif;
+  --fs:    'Cormorant Garamond', serif;
+  --fb:    'DM Sans', sans-serif;
+  --fm:    'JetBrains Mono', monospace;
+  --max:   1180px;
+  --pad:   clamp(20px,5vw,80px);
+}
+
+/* ─── RESET ──────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:16px}
+body{
+  font-family:var(--fb);
+  background:var(--bg);
+  color:var(--t1);
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+a{color:inherit;text-decoration:none}
+button{font-family:var(--fb);cursor:pointer;border:none;background:none}
+
+/* warm grain texture overlay */
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  background-size:300px 300px;
+  pointer-events:none;
+  z-index:0;
+  opacity:.6;
+}
+
+/* ─── LAYOUT ─────────────────────────────────────────── */
+.wrap{max-width:var(--max);margin:0 auto;padding:0 var(--pad);position:relative;z-index:1}
+section{position:relative;z-index:1}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bdr3);border-radius:99px}
+
+/* ─── TYPE ───────────────────────────────────────────── */
+.eyebrow{
+  display:inline-flex;align-items:center;gap:10px;
+  font-family:var(--fm);font-size:.68rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--g);margin-bottom:20px;
+}
+.eyebrow::before{content:'';width:24px;height:1px;background:var(--g)}
+
+.d1{font-family:var(--fd);font-weight:800;line-height:.92;letter-spacing:-.01em;color:var(--t1)}
+.d2{font-family:var(--fd);font-weight:700;line-height:.94;letter-spacing:-.01em;color:var(--t1)}
+.italic{font-family:var(--fs);font-style:italic;font-weight:400;color:var(--g);letter-spacing:.01em}
+.body{font-family:var(--fb);font-weight:300;font-size:1rem;color:var(--t2);line-height:1.78;max-width:520px}
+
+/* ─── BUTTONS ────────────────────────────────────────── */
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:0 24px;height:46px;
+  font-family:var(--fb);font-size:.88rem;font-weight:500;
+  border-radius:5px;border:none;cursor:pointer;
+  transition:background .15s,color .15s,border-color .15s,transform .12s;
+  white-space:nowrap;
+}
+.btn:active{transform:scale(.97)}
+.btn-gold{background:var(--g);color:#09080A;font-weight:600}
+.btn-gold:hover{background:#D8B85E}
+.btn-line{background:transparent;color:var(--t1);border:1px solid var(--bdr3)}
+.btn-line:hover{border-color:var(--t2);background:var(--bg3)}
+.btn-lg{height:52px;padding:0 30px;font-size:.95rem}
+.arr{width:13px;height:13px;transition:transform .15s}
+.btn:hover .arr{transform:translateX(3px)}
+
+/* ─── NAV ────────────────────────────────────────────── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;height:62px;
+  border-bottom:1px solid transparent;
+  transition:border-color .3s,background .3s;
+}
+nav.scrolled{background:rgba(9,8,10,.94);backdrop-filter:blur(14px);border-color:var(--bdr)}
+.nav-i{
+  height:62px;display:flex;align-items:center;
+  justify-content:space-between;gap:24px;
+}
+/* KINETIC LOGO — green stays */
+.logo{display:flex;align-items:center;gap:9px;flex-shrink:0}
+.logo-mark{
+  width:26px;height:26px;background:var(--logo);
+  border-radius:4px;display:flex;align-items:center;justify-content:center;
+}
+.logo-mark svg{width:14px;height:14px;fill:#09080A}
+.logo-word{font-family:var(--fd);font-size:1.15rem;font-weight:700;letter-spacing:.1em;color:var(--t1)}
+.logo-word em{color:var(--logo);font-style:normal}
+
+.nav-links{display:flex;align-items:center;gap:28px;list-style:none}
+.nav-links a{font-size:.85rem;font-weight:400;color:var(--t2);transition:color .15s;letter-spacing:.02em}
+.nav-links a:hover{color:var(--t1)}
+.nav-act{display:flex;align-items:center;gap:10px}
+
+/* Hamburger */
+.hbg{
+  display:none;flex-direction:column;justify-content:center;gap:5px;
+  width:36px;height:36px;padding:6px;
+  border:1px solid var(--bdr2);border-radius:5px;cursor:pointer;
+}
+.hbg span{
+  display:block;width:100%;height:1.5px;background:var(--t1);
+  border-radius:99px;transition:transform .25s,opacity .2s;transform-origin:center;
+}
+.hbg.open span:nth-child(1){transform:translateY(6.5px) rotate(45deg)}
+.hbg.open span:nth-child(2){opacity:0;transform:scaleX(0)}
+.hbg.open span:nth-child(3){transform:translateY(-6.5px) rotate(-45deg)}
+
+.mob-menu{
+  display:none;position:fixed;inset:62px 0 0;
+  background:var(--bg);z-index:99;
+  padding:32px var(--pad);flex-direction:column;
+  border-top:1px solid var(--bdr);overflow-y:auto;
+}
+.mob-menu.open{display:flex}
+.mob-menu a{
+  display:block;padding:16px 0;font-size:1.05rem;
+  color:var(--t2);border-bottom:1px solid var(--bdr);transition:color .15s;
+}
+.mob-menu a:hover{color:var(--t1)}
+.mob-menu .btn{margin-top:28px;width:100%;justify-content:center}
+
+/* ─── HERO ───────────────────────────────────────────── */
+#hero{
+  min-height:100svh;padding:130px 0 80px;
+  display:flex;align-items:center;
+  border-bottom:1px solid var(--bdr);
+  overflow:hidden;
+}
+
+/* huge watermark "KINETIC" behind hero */
+#hero::after{
+  content:'KINETIC';
+  position:absolute;
+  right:-40px;top:50%;
+  transform:translateY(-50%);
+  font-family:var(--fd);font-weight:800;
+  font-size:clamp(9rem,20vw,18rem);
+  letter-spacing:-.02em;
+  color:transparent;
+  -webkit-text-stroke:1px rgba(201,168,76,.06);
+  pointer-events:none;
+  line-height:1;
+  white-space:nowrap;
+  user-select:none;
+}
+
+.hero-grid{
+  display:grid;
+  grid-template-columns:1fr 440px;
+  gap:60px;align-items:center;
+}
+
+.hero-left .hero-title{
+  font-size:clamp(4rem,8.5vw,7.5rem);
+  margin-bottom:28px;
+}
+.hero-title .gold{color:var(--g)}
+
+.hero-sub{margin-bottom:36px;font-size:1.05rem;line-height:1.75;color:var(--t2);font-weight:300;max-width:430px}
+
+.hero-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.hero-note{font-size:.72rem;color:var(--t3);margin-top:18px;font-family:var(--fm);letter-spacing:.04em}
+
+/* Hero live card — GREEN stays, it's the real app */
+.live-card{
+  background:#0D1117;border:1px solid #1E2733;border-radius:12px;overflow:hidden;
+}
+.live-card-hdr{
+  padding:12px 16px;border-bottom:1px solid #1E2733;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.live-label{font-family:var(--fd);font-size:.68rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#4ADE80}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#4ADE80;box-shadow:0 0 6px rgba(74,222,128,.6);animation:blink 2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.live-canvas{padding:24px 16px;background:#07090F;display:flex;justify-content:center}
+.live-metrics{
+  padding:14px 16px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+  border-top:1px solid #1E2733;
+}
+.lm{background:#141A24;border:1px solid #1E2733;border-radius:5px;padding:9px 11px}
+.lm-lbl{font-size:.58rem;text-transform:uppercase;letter-spacing:.08em;color:#3D4F63;margin-bottom:3px}
+.lm-val{font-family:var(--fm);font-size:1.05rem;font-weight:500;color:#ECF0F5}
+.lm-val.gn{color:#4ADE80}
+
+.coach-float{
+  position:absolute;right:-16px;bottom:56px;
+  background:#141A24;border:1px solid #253042;border-radius:8px;
+  padding:10px 13px;font-size:.76rem;color:#7B8EA8;
+  max-width:188px;line-height:1.5;
+  box-shadow:0 4px 24px rgba(0,0,0,.5);
+  animation:cf 4s ease-in-out infinite;
+}
+@keyframes cf{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.coach-float strong{color:#4ADE80;font-weight:500}
+.coach-float::before{content:'';position:absolute;top:10px;left:-5px;width:10px;height:10px;background:#141A24;border-left:1px solid #253042;border-bottom:1px solid #253042;transform:rotate(45deg)}
+.live-card-wrap{position:relative}
+
+/* ─── STATS ──────────────────────────────────────────── */
+#stats{border-bottom:1px solid var(--bdr)}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr)}
+.stat{
+  padding:44px 32px;border-right:1px solid var(--bdr);
+  position:relative;
+}
+.stat:last-child{border-right:none}
+.stat-n{
+  font-family:var(--fd);font-size:clamp(2.4rem,4vw,3.2rem);
+  font-weight:800;color:var(--t1);line-height:1;margin-bottom:7px;
+}
+.stat-n em{color:var(--g);font-style:normal}
+.stat-d{font-size:.82rem;color:var(--t2);line-height:1.55;font-weight:300}
+
+/* ─── SECTION SHARED ─────────────────────────────────── */
+.sec{padding:100px 0}
+.sec+.sec{border-top:1px solid var(--bdr)}
+
+.sec-hdr{
+  display:grid;grid-template-columns:auto 1fr;
+  gap:0 48px;align-items:start;margin-bottom:64px;
+}
+.sec-num{
+  font-family:var(--fm);font-size:.65rem;color:var(--t3);
+  letter-spacing:.1em;padding-top:6px;
+}
+.sec-title-col{}
+.sec-title{font-size:clamp(2.6rem,5vw,3.8rem);margin-bottom:16px}
+.sec-title .g{color:var(--g)}
+.sec-sub{font-size:.9rem;color:var(--t2);font-weight:300;line-height:1.72;max-width:480px}
+
+/* ─── FEATURES ───────────────────────────────────────── */
+.feat-list{display:flex;flex-direction:column;gap:0}
+.feat-row{
+  display:grid;grid-template-columns:56px 240px 1fr;
+  gap:0 32px;align-items:start;
+  padding:32px 0;border-top:1px solid var(--bdr);
+  transition:background .2s;
+}
+.feat-row:last-child{border-bottom:1px solid var(--bdr)}
+.feat-idx{
+  font-family:var(--fm);font-size:.68rem;color:var(--t3);
+  padding-top:4px;letter-spacing:.06em;
+}
+.feat-name{
+  font-family:var(--fd);font-size:1.25rem;font-weight:700;
+  letter-spacing:.05em;text-transform:uppercase;color:var(--t1);
+  line-height:1.2;padding-top:2px;
+}
+.feat-desc{font-size:.88rem;color:var(--t2);line-height:1.72;font-weight:300}
+.feat-row:hover .feat-idx{color:var(--g)}
+.feat-row:hover .feat-name{color:var(--g)}
+
+/* ─── HOW IT WORKS ───────────────────────────────────── */
+.steps{display:flex;flex-direction:column;gap:0}
+.step{
+  display:grid;grid-template-columns:56px 1fr;gap:0 32px;
+  padding:36px 0;border-top:1px solid var(--bdr);
+  position:relative;
+}
+.step:last-child{border-bottom:1px solid var(--bdr)}
+
+/* vertical connector */
+.step:not(:last-child)::after{
+  content:'';position:absolute;
+  left:26px;top:68px;bottom:-36px;
+  width:1px;background:var(--bdr);
+}
+
+.step-circle{
+  width:52px;height:52px;border-radius:50%;
+  border:1px solid var(--bdr2);background:var(--bg2);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--fm);font-size:.75rem;color:var(--t3);
+  flex-shrink:0;position:relative;z-index:1;
+  transition:border-color .2s,color .2s,background .2s;
+}
+.step:hover .step-circle{border-color:var(--gb);background:var(--gd);color:var(--g)}
+
+.step-body{}
+.step-title{
+  font-family:var(--fd);font-size:1.15rem;font-weight:700;
+  letter-spacing:.05em;text-transform:uppercase;color:var(--t1);
+  margin-bottom:8px;
+}
+.step-desc{font-size:.88rem;color:var(--t2);line-height:1.72;font-weight:300;max-width:560px}
+
+/* ─── EXERCISES ──────────────────────────────────────── */
+.ex-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:1px;
+  background:var(--bdr);border:1px solid var(--bdr);
+  border-radius:10px;overflow:hidden;
+}
+.ex-card{
+  background:var(--bg2);padding:36px 32px;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+  transition:background .2s;
+}
+.ex-card:hover{background:var(--bg3)}
+.ex-card:hover .ex-n{color:var(--g)}
+.ex-card.wide{grid-column:1/-1}
+
+.ex-n{font-family:var(--fm);font-size:.65rem;color:var(--t3);transition:color .2s;letter-spacing:.06em;margin-top:3px}
+.ex-name{
+  font-family:var(--fd);font-size:1.6rem;font-weight:800;
+  letter-spacing:.03em;text-transform:uppercase;
+  color:var(--t1);line-height:1;margin-bottom:8px;
+}
+.ex-meta{display:flex;gap:6px;flex-wrap:wrap}
+.ex-tag{
+  font-family:var(--fm);font-size:.62rem;letter-spacing:.06em;
+  color:var(--t3);background:var(--bg3);
+  border:1px solid var(--bdr);border-radius:3px;padding:2px 7px;
+}
+
+/* ─── ABOUT / TECH ───────────────────────────────────── */
+.about-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:start}
+.tech-rows{margin-top:28px}
+.tech-r{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:13px 0;border-bottom:1px solid var(--bdr);
+}
+.tech-r:first-child{border-top:1px solid var(--bdr)}
+.tech-name{font-family:var(--fm);font-size:.8rem;color:var(--t2)}
+.tech-badge{
+  font-family:var(--fm);font-size:.62rem;letter-spacing:.06em;
+  color:var(--g);background:var(--gd);border:1px solid var(--gm);
+  border-radius:3px;padding:2px 8px;
+}
+.code-card{
+  background:var(--bg);border:1px solid var(--bdr);border-radius:10px;overflow:hidden;
+}
+.code-hdr{
+  padding:11px 16px;border-bottom:1px solid var(--bdr);
+  display:flex;align-items:center;gap:8px;
+}
+.dots{display:flex;gap:5px}
+.dot{width:10px;height:10px;border-radius:50%}
+.dr{background:#F87171}.dy{background:#FBBF24}.dg{background:#4ADE80}
+.code-fname{font-family:var(--fm);font-size:.7rem;color:var(--t3);margin-left:6px}
+.code-body{
+  padding:18px 20px;font-family:var(--fm);
+  font-size:.77rem;line-height:2;overflow-x:auto;
+}
+.ck{color:#60A5FA}.cf{color:var(--g)}.cs{color:#F59E0B}
+.cn{color:#FB7185}.cc{color:var(--t3)}.ct{color:var(--t2)}
+
+/* ─── FAQ ────────────────────────────────────────────── */
+.faq-wrap{max-width:740px;margin:0 auto}
+.fq{border-bottom:1px solid var(--bdr)}
+.fq:first-child{border-top:1px solid var(--bdr)}
+.fq-btn{
+  width:100%;background:none;border:none;cursor:pointer;
+  padding:22px 0;display:flex;align-items:center;
+  justify-content:space-between;gap:20px;text-align:left;
+}
+.fq-q{
+  font-family:var(--fd);font-size:1.05rem;font-weight:700;
+  letter-spacing:.03em;color:var(--t1);line-height:1.3;
+}
+.fq-ico{
+  flex-shrink:0;width:22px;height:22px;border-radius:50%;
+  border:1px solid var(--bdr2);display:flex;align-items:center;
+  justify-content:center;transition:background .2s,border-color .2s,transform .25s;
+}
+.fq-ico svg{width:10px;height:10px;stroke:var(--t2);transition:stroke .2s}
+.fq.open .fq-ico{background:var(--gd);border-color:var(--gb);transform:rotate(45deg)}
+.fq.open .fq-ico svg{stroke:var(--g)}
+.fq-a{
+  display:none;padding-bottom:22px;
+  font-size:.88rem;color:var(--t2);line-height:1.78;font-weight:300;max-width:640px;
+}
+.fq.open .fq-a{display:block}
+
+/* ─── CTA ────────────────────────────────────────────── */
+#cta{
+  padding:110px 0;text-align:center;
+  border-top:1px solid var(--bdr);
+  position:relative;overflow:hidden;
+}
+#cta::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 800px 500px at center,rgba(201,168,76,.05) 0%,transparent 70%);
+  pointer-events:none;
+}
+.cta-kicker{
+  font-family:var(--fs);font-style:italic;
+  font-size:1.1rem;color:var(--g);margin-bottom:16px;display:block;
+}
+.cta-title{font-size:clamp(3.2rem,7vw,6rem);margin-bottom:24px}
+.cta-desc{font-size:.95rem;color:var(--t2);font-weight:300;line-height:1.72;max-width:440px;margin:0 auto 40px}
+.cta-acts{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap}
+.cta-note{font-family:var(--fm);font-size:.68rem;color:var(--t3);margin-top:20px;letter-spacing:.04em}
+
+/* ─── FOOTER ─────────────────────────────────────────── */
+footer{border-top:1px solid var(--bdr);padding:52px 0 32px}
+.foot-grid{
+  display:grid;grid-template-columns:1fr auto auto auto;
+  gap:64px;align-items:start;margin-bottom:44px;
+}
+.foot-brand p{font-size:.8rem;color:var(--t3);line-height:1.65;margin-top:11px;max-width:210px}
+.foot-col-ttl{font-family:var(--fm);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);margin-bottom:16px}
+.foot-links{list-style:none;display:flex;flex-direction:column;gap:10px}
+.foot-links a{font-size:.84rem;color:var(--t2);transition:color .15s}
+.foot-links a:hover{color:var(--t1)}
+.foot-btm{
+  border-top:1px solid var(--bdr);padding-top:24px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+}
+.foot-copy{font-family:var(--fm);font-size:.72rem;color:var(--t3)}
+.foot-by{font-family:var(--fm);font-size:.7rem;color:var(--t3)}
+.foot-by span{color:var(--g)}
+
+/* ─── SCROLL REVEAL ──────────────────────────────────── */
+.rv{opacity:0;transform:translateY(20px);transition:opacity .55s ease,transform .55s ease}
+.rv.in{opacity:1;transform:translateY(0)}
+.rv1{transition-delay:.08s}.rv2{transition-delay:.16s}.rv3{transition-delay:.24s}
+
+/* ─── RESPONSIVE ─────────────────────────────────────── */
+@media(max-width:1020px){
+  .hero-grid{grid-template-columns:1fr;gap:52px}
+  .live-card-wrap{max-width:440px}
+  .coach-float{display:none}
+  #hero::after{font-size:10rem;right:-20px}
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .stat:nth-child(2){border-right:none}
+  .stat:nth-child(3){border-right:1px solid var(--bdr);border-top:1px solid var(--bdr)}
+  .stat:nth-child(4){border-top:1px solid var(--bdr);border-right:none}
+  .sec-hdr{grid-template-columns:1fr}
+  .feat-row{grid-template-columns:44px 1fr;gap:0 20px}
+  .feat-desc{grid-column:2;margin-top:6px}
+  .about-grid{grid-template-columns:1fr;gap:52px}
+  .foot-grid{grid-template-columns:1fr 1fr;gap:36px}
+  .foot-grid>div:first-child{grid-column:1/-1}
+}
+@media(max-width:720px){
+  .sec{padding:68px 0}
+  #hero::after{display:none}
+  .nav-links,.nav-act{display:none}
+  .hbg{display:flex}
+  .feat-row{grid-template-columns:1fr;gap:8px;padding:24px 0}
+  .feat-idx{display:none}
+  .step{grid-template-columns:44px 1fr;gap:0 20px}
+  .step:not(:last-child)::after{left:22px;top:66px}
+  .ex-grid{grid-template-columns:1fr}
+  .ex-card.wide{grid-column:auto}
+  .foot-grid{grid-template-columns:1fr;gap:28px}
+  .foot-grid>div:first-child{grid-column:auto}
+}
+@media(max-width:460px){
+  .stats-row{grid-template-columns:1fr}
+  .stat{border-right:none!important;border-top:1px solid var(--bdr)}
+  .stat:first-child{border-top:none}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="wrap nav-i">
+    <a href="#hero" class="logo">
+      <div class="logo-mark"><svg viewBox="0 0 16 16"><path d="M3 2h2l3 4.5L11 2h2L9.5 8 13 14h-2l-3-4.5L5 14H3l3.5-6L3 2z"/></svg></div>
+      <span class="logo-word">KINE<em>TIC</em></span>
+    </a>
+
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#about">Tech</a></li>
+      <li><a href="#exercises">Exercises</a></li>
+      <li><a href="#faq">FAQ</a></li>
+    </ul>
+
+    <div class="nav-act">
+      <a href="#cta" class="btn btn-line">Learn more</a>
+      <a href="/app" class="btn btn-gold">
+        Open app
+        <svg class="arr" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 6.5h9M7 2l4.5 4.5L7 11"/></svg>
+      </a>
+    </div>
+
+    <button class="hbg" id="hbg" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<div class="mob-menu" id="mob">
+  <a href="#features" onclick="cM()">Features</a>
+  <a href="#how" onclick="cM()">How it works</a>
+  <a href="#about" onclick="cM()">Tech stack</a>
+  <a href="#exercises" onclick="cM()">Exercises</a>
+  <a href="#faq" onclick="cM()">FAQ</a>
+  <a href="/app" class="btn btn-gold" style="margin-top:28px;width:100%;justify-content:center">Open KINETIC app</a>
+</div>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div class="hero-left">
+        <div class="eyebrow">Real-time AI fitness coach</div>
+
+        <h1 class="d1 hero-title">
+          THE COACH<br>
+          <span class="gold">THAT SEES</span><br>
+          YOUR FORM
+        </h1>
+
+        <p class="hero-sub">
+          KINETIC watches every rep through your webcam — tracking joint angles, counting sets, and delivering live voice coaching powered by a large language model.
+          <span class="italic" style="display:block;margin-top:10px;font-size:1.1rem">No app. No wearable. Just a browser.</span>
+        </p>
+
+        <div class="hero-actions">
+          <a href="/app" class="btn btn-gold btn-lg">
+            Start training
+            <svg class="arr" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 6.5h9M7 2l4.5 4.5L7 11"/></svg>
+          </a>
+          <a href="#how" class="btn btn-line btn-lg">See how it works</a>
+        </div>
+
+        <p class="hero-note">No account required &middot; Camera only &middot; Runs in browser</p>
+      </div>
+
+      <div class="live-card-wrap">
+        <div class="live-card">
+          <div class="live-card-hdr">
+            <span class="live-label">Live session</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-family:var(--fm);font-size:.62rem;color:#3D4F63">SQUATS</span>
+              <div class="live-dot"></div>
+            </div>
+          </div>
+
+          <div class="live-canvas">
+            <svg viewBox="0 0 240 200" width="240" height="200" xmlns="http://www.w3.org/2000/svg">
+              <rect width="240" height="200" fill="#07090F"/>
+              <line stroke="#4ADE80" stroke-width="3" stroke-linecap="round" x1="120" y1="45" x2="120" y2="105"/>
+              <line stroke="#4ADE80" stroke-width="3" stroke-linecap="round" x1="120" y1="60" x2="92" y2="76"/>
+              <line stroke="#4ADE80" stroke-width="3" stroke-linecap="round" x1="120" y1="60" x2="148" y2="76"/>
+              <line stroke="#4ADE80" stroke-width="3" stroke-linecap="round" x1="92" y1="76" x2="80" y2="100"/>
+              <line stroke="#4ADE80" stroke-width="3" stroke-linecap="round" x1="148" y1="76" x2="160" y2="100"/>
+              <line stroke="#4ADE80" stroke-width="3" stroke-linecap="round" x1="120" y1="105" x2="104" y2="108"/>
+              <line stroke="#4ADE80" stroke-width="3" stroke-linecap="round" x1="120" y1="105" x2="136" y2="108"/>
+              <line id="lt" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" x1="104" y1="108" x2="88" y2="150"/>
+              <line id="rt" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" x1="136" y1="108" x2="152" y2="150"/>
+              <line id="ls" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" x1="88" y1="150" x2="86" y2="190"/>
+              <line id="rs" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" x1="152" y1="150" x2="154" y2="190"/>
+              <circle cx="120" cy="32" r="13" stroke="#4ADE80" stroke-width="3" fill="none"/>
+              <circle fill="#fff" cx="120" cy="45" r="4"/>
+              <circle fill="#fff" cx="120" cy="60" r="3.5"/>
+              <circle fill="#fff" cx="92" cy="76" r="3.5"/>
+              <circle fill="#fff" cx="148" cy="76" r="3.5"/>
+              <circle fill="#fff" cx="80" cy="100" r="3"/>
+              <circle fill="#fff" cx="160" cy="100" r="3"/>
+              <circle fill="#fff" cx="120" cy="105" r="4"/>
+              <circle fill="#fff" cx="104" cy="108" r="3.5"/>
+              <circle fill="#fff" cx="136" cy="108" r="3.5"/>
+              <circle fill="#fff" id="lk" cx="88" cy="150" r="4"/>
+              <circle fill="#fff" id="rk" cx="152" cy="150" r="4"/>
+              <circle fill="#fff" cx="86" cy="190" r="3"/>
+              <circle fill="#fff" cx="154" cy="190" r="3"/>
+              <text x="12" y="195" fill="#4ADE80" font-family="JetBrains Mono,monospace" font-size="9" font-weight="500">DEPTH: GOOD</text>
+              <text x="168" y="195" fill="#4ADE80" font-family="JetBrains Mono,monospace" font-size="9">94°</text>
+            </svg>
+          </div>
+
+          <div class="live-metrics">
+            <div class="lm"><div class="lm-lbl">Reps</div><div class="lm-val gn" id="rc">0</div></div>
+            <div class="lm"><div class="lm-lbl">Set</div><div class="lm-val">2/3</div></div>
+            <div class="lm"><div class="lm-lbl">Form</div><div class="lm-val gn">Good</div></div>
+          </div>
+        </div>
+
+        <div class="coach-float">
+          <strong>Coach:</strong> Drive through your heels on the way up — excellent depth on that rep.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div id="stats">
+  <div class="wrap" style="padding:0">
+    <div class="stats-row">
+      <div class="stat rv"><div class="stat-n">5<em>+</em></div><div class="stat-d">Exercises with full pose tracking and real-time form analysis</div></div>
+      <div class="stat rv rv1"><div class="stat-n">33<em> pts</em></div><div class="stat-d">Body landmarks detected per frame by MediaPipe Pose Landmarker</div></div>
+      <div class="stat rv rv2"><div class="stat-n">EMA<em>+</em></div><div class="stat-d">Exponential moving average applied to joint angles to eliminate jitter</div></div>
+      <div class="stat rv rv3"><div class="stat-n">LLM<em>-driven</em></div><div class="stat-d">Form coaching generated from raw metrics — no hardcoded if/else rules</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features" class="sec">
+  <div class="wrap">
+    <div class="sec-hdr rv">
+      <div class="sec-num">01</div>
+      <div class="sec-title-col">
+        <h2 class="d2 sec-title">What KINETIC<br><span class="g">actually does</span></h2>
+        <p class="sec-sub">Every feature was built for accuracy and usefulness, not to fill a feature checklist.</p>
+      </div>
+    </div>
+
+    <div class="feat-list">
+      <div class="feat-row rv">
+        <div class="feat-idx">01</div>
+        <div class="feat-name">Real-Time Pose Tracking</div>
+        <div class="feat-desc">MediaPipe Pose Landmarker processes every camera frame server-side, detecting 33 body landmarks with visibility scoring. Exponential Moving Average smoothing is applied to all joint angles before rep counting — eliminating the jitter that causes false reps in raw pose estimation output.</div>
+      </div>
+      <div class="feat-row rv">
+        <div class="feat-idx">02</div>
+        <div class="feat-name">Automatic Rep Counting</div>
+        <div class="feat-desc">Per-exercise detectors use smoothed joint angles to detect the up and down phases of each movement. Rep state transitions are tracked via stage flags — no button press required. Just perform the movement and KINETIC increments the count when a full range of motion is completed.</div>
+      </div>
+      <div class="feat-row rv">
+        <div class="feat-idx">03</div>
+        <div class="feat-name">LLM Form Analysis</div>
+        <div class="feat-desc">Raw pose metrics — knee angles, hip alignment, back angle, swing status — are sent as structured JSON to LLaMA-3.3-70B running on Groq. The model infers what the form issue is from the data and generates a coaching cue. No hardcoded rules. The coaching adapts to what it actually observes.</div>
+      </div>
+      <div class="feat-row rv">
+        <div class="feat-idx">04</div>
+        <div class="feat-name">Voice Coaching Pipeline</div>
+        <div class="feat-desc">The LLM output is passed to gTTS and played back through the browser audio API. Coaching fires on major events (workout start, set complete, session end) and on form deviations, with a 5-second cooldown preventing repetitive feedback. Completely hands-free.</div>
+      </div>
+      <div class="feat-row rv">
+        <div class="feat-idx">05</div>
+        <div class="feat-name">Progress Analytics</div>
+        <div class="feat-desc">Completed sets are written to SQLite keyed by username and date. The analytics endpoint groups reps and duration by exercise across sessions. Chart.js renders the history as a bar chart with per-exercise filtering — turning the database into a visual progress tracker.</div>
+      </div>
+      <div class="feat-row rv">
+        <div class="feat-idx">06</div>
+        <div class="feat-name">WebSocket Architecture</div>
+        <div class="feat-desc">Browser sends JPEG frames over a persistent WebSocket. Ack-based flow control prevents frame queue buildup under server load — the next frame is only sent after the server responds to the previous one. Exponential backoff reconnection handles brief network drops without killing the session.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how" class="sec">
+  <div class="wrap">
+    <div class="sec-hdr rv">
+      <div class="sec-num">02</div>
+      <div class="sec-title-col">
+        <h2 class="d2 sec-title">From camera<br><span class="g">to coaching</span></h2>
+        <p class="sec-sub">The technical pipeline from your webcam to the coach's voice — in four steps.</p>
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="step rv">
+        <div class="step-circle">01</div>
+        <div class="step-body">
+          <div class="step-title">Configure your session</div>
+          <div class="step-desc">Choose an exercise and set your target sets and reps in the sidebar. Enter a username — no account, no password. Your session is identified locally and workout history is stored under that username in SQLite.</div>
+        </div>
+      </div>
+      <div class="step rv">
+        <div class="step-circle">02</div>
+        <div class="step-body">
+          <div class="step-title">Camera streams frames</div>
+          <div class="step-desc">Your webcam captures frames at up to 10fps. Each frame is JPEG-encoded in the browser and sent as base64 over a WebSocket to the FastAPI backend. Ack-based flow control ensures the server is never flooded — the browser waits for a response before sending the next frame.</div>
+        </div>
+      </div>
+      <div class="step rv">
+        <div class="step-circle">03</div>
+        <div class="step-body">
+          <div class="step-title">MediaPipe analyses pose</div>
+          <div class="step-desc">The server runs MediaPipe Pose Landmarker on each frame, extracting 33 landmarks. EMA smoothing cleans the angle signal. The exercise-specific detector processes smoothed angles to update the rep count and form flags. The annotated frame is JPEG-encoded and returned to the browser.</div>
+        </div>
+      </div>
+      <div class="step rv">
+        <div class="step-circle">04</div>
+        <div class="step-body">
+          <div class="step-title">LLM coaches, voice delivers</div>
+          <div class="step-desc">Form metrics are serialised as JSON and sent to LLaMA-3.3-70B on Groq, which decides what coaching cue fits the current state. The response is passed to gTTS, and the audio plays in your browser — all within the same WebSocket response cycle.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EXERCISES -->
+<section id="exercises" class="sec">
+  <div class="wrap">
+    <div class="sec-hdr rv">
+      <div class="sec-num">03</div>
+      <div class="sec-title-col">
+        <h2 class="d2 sec-title">Five exercises,<br><span class="g">fully tracked</span></h2>
+        <p class="sec-sub">Each exercise has a dedicated detector with movement-specific angle thresholds, form flags, and coaching context.</p>
+      </div>
+    </div>
+
+    <div class="ex-grid rv">
+      <div class="ex-card">
+        <div><div class="ex-name">Squats</div><div class="ex-meta"><span class="ex-tag">Legs</span><span class="ex-tag">Knee angle</span><span class="ex-tag">Depth status</span></div></div>
+        <div class="ex-n">01</div>
+      </div>
+      <div class="ex-card">
+        <div><div class="ex-name">Push-ups</div><div class="ex-meta"><span class="ex-tag">Upper body</span><span class="ex-tag">Hip alignment</span><span class="ex-tag">Body line</span></div></div>
+        <div class="ex-n">02</div>
+      </div>
+      <div class="ex-card">
+        <div><div class="ex-name">Biceps Curls</div><div class="ex-meta"><span class="ex-tag">Arms</span><span class="ex-tag">Elbow drift</span><span class="ex-tag">Torso swing</span></div></div>
+        <div class="ex-n">03</div>
+      </div>
+      <div class="ex-card">
+        <div><div class="ex-name">Shoulder Press</div><div class="ex-meta"><span class="ex-tag">Shoulders</span><span class="ex-tag">Extension</span><span class="ex-tag">Back arch</span></div></div>
+        <div class="ex-n">04</div>
+      </div>
+      <div class="ex-card wide">
+        <div><div class="ex-name">Lunges</div><div class="ex-meta"><span class="ex-tag">Legs</span><span class="ex-tag">Knee angle</span><span class="ex-tag">Torso angle</span><span class="ex-tag">Balance status</span></div></div>
+        <div class="ex-n">05</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT / TECH -->
+<section id="about" class="sec">
+  <div class="wrap">
+    <div class="sec-hdr rv">
+      <div class="sec-num">04</div>
+      <div class="sec-title-col">
+        <h2 class="d2 sec-title">Built on<br><span class="g">production tech</span></h2>
+        <p class="sec-sub">Every component was chosen for real-world performance and technical depth — not framework familiarity.</p>
+      </div>
+    </div>
+
+    <div class="about-grid rv">
+      <div>
+        <div class="tech-rows">
+          <div class="tech-r"><span class="tech-name">FastAPI + uvicorn</span><span class="tech-badge">Backend</span></div>
+          <div class="tech-r"><span class="tech-name">MediaPipe Pose Landmarker</span><span class="tech-badge">ML / Vision</span></div>
+          <div class="tech-r"><span class="tech-name">EMA Angle Smoothing</span><span class="tech-badge">Signal Processing</span></div>
+          <div class="tech-r"><span class="tech-name">Groq LLaMA-3.3-70B</span><span class="tech-badge">LLM Inference</span></div>
+          <div class="tech-r"><span class="tech-name">gTTS Text-to-Speech</span><span class="tech-badge">Voice</span></div>
+          <div class="tech-r"><span class="tech-name">WebSocket (ack-based)</span><span class="tech-badge">Real-time Transport</span></div>
+          <div class="tech-r"><span class="tech-name">SQLite + Chart.js</span><span class="tech-badge">Persistence + Analytics</span></div>
+          <div class="tech-r"><span class="tech-name">Vanilla HTML / CSS / JS</span><span class="tech-badge">Frontend</span></div>
+        </div>
+      </div>
+
+      <div class="code-card">
+        <div class="code-hdr">
+          <div class="dots"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div></div>
+          <span class="code-fname">voice_pipeline.py</span>
+        </div>
+        <div class="code-body">
+<span class="cc"># LLM receives raw metrics — no if/else</span>
+<span class="ck">class</span> <span class="cf">VoicePipeline</span>:
+&nbsp;&nbsp;<span class="ck">def</span> <span class="cf">process_event</span>(<span class="ct">self, event,</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ct">exercise, metrics</span>):
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="ct">now</span> <span class="ct">=</span> <span class="cf">time</span>.<span class="cf">time</span>()
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="ck">if</span> <span class="ct">now</span> <span class="ct">-</span> <span class="ct">self.last_spoken_at</span> <span class="ct">&lt;</span> <span class="cn">5</span>:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ck">return</span> <span class="cn">None</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cc"># LLM judges form from raw data</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="ct">text</span> <span class="ct">=</span> <span class="ct">self.llm</span>.<span class="cf">give_feedback</span>(
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ct">event, exercise, metrics</span>
+&nbsp;&nbsp;&nbsp;&nbsp;)
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="ct">voice</span> <span class="ct">=</span> <span class="ct">self.tts</span>.<span class="cf">speak</span>(<span class="ct">text</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="ck">return</span> <span class="ct">voice, text</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="sec">
+  <div class="wrap">
+    <div class="sec-hdr rv">
+      <div class="sec-num">05</div>
+      <div class="sec-title-col">
+        <h2 class="d2 sec-title">Common<br><span class="g">questions</span></h2>
+      </div>
+    </div>
+
+    <div class="faq-wrap">
+      <div class="fq">
+        <button class="fq-btn" onclick="tF(this)">
+          <span class="fq-q">Do I need an account or to install anything?</span>
+          <div class="fq-ico"><svg viewBox="0 0 10 10" fill="none" stroke-width="1.5" stroke-linecap="round"><line x1="5" y1="1" x2="5" y2="9"/><line x1="1" y1="5" x2="9" y2="5"/></svg></div>
+        </button>
+        <div class="fq-a">Nothing to install, no sign-up. KINETIC runs entirely in your browser. Enter a username — which identifies your local workout history — allow camera access, and start training.</div>
+      </div>
+      <div class="fq">
+        <button class="fq-btn" onclick="tF(this)">
+          <span class="fq-q">Is my camera feed stored anywhere?</span>
+          <div class="fq-ico"><svg viewBox="0 0 10 10" fill="none" stroke-width="1.5" stroke-linecap="round"><line x1="5" y1="1" x2="5" y2="9"/><line x1="1" y1="5" x2="9" y2="5"/></svg></div>
+        </button>
+        <div class="fq-a">No. Frames are processed in real-time on the server and immediately discarded. Only the resulting metrics — rep count, set progress, form flags — are returned to your browser. No video is stored at any point.</div>
+      </div>
+      <div class="fq">
+        <button class="fq-btn" onclick="tF(this)">
+          <span class="fq-q">How does the AI coach actually work?</span>
+          <div class="fq-ico"><svg viewBox="0 0 10 10" fill="none" stroke-width="1.5" stroke-linecap="round"><line x1="5" y1="1" x2="5" y2="9"/><line x1="1" y1="5" x2="9" y2="5"/></svg></div>
+        </button>
+        <div class="fq-a">Raw joint angles and pose flags are serialised as JSON and sent to LLaMA-3.3-70B running on Groq. The model reads the actual numbers and decides what coaching cue to give — there are no hardcoded if/else rules for form detection. The LLM infers issues from the data the same way a coach would from watching you.</div>
+      </div>
+      <div class="fq">
+        <button class="fq-btn" onclick="tF(this)">
+          <span class="fq-q">Does it work without a Groq API key?</span>
+          <div class="fq-ico"><svg viewBox="0 0 10 10" fill="none" stroke-width="1.5" stroke-linecap="round"><line x1="5" y1="1" x2="5" y2="9"/><line x1="1" y1="5" x2="9" y2="5"/></svg></div>
+        </button>
+        <div class="fq-a">Yes. Pose tracking, rep counting, form metrics, session history, and the progress chart all work without a Groq key. Voice coaching requires the GROQ_API_KEY environment variable set before starting the server.</div>
+      </div>
+      <div class="fq">
+        <button class="fq-btn" onclick="tF(this)">
+          <span class="fq-q">What is EMA smoothing and why does it matter?</span>
+          <div class="fq-ico"><svg viewBox="0 0 10 10" fill="none" stroke-width="1.5" stroke-linecap="round"><line x1="5" y1="1" x2="5" y2="9"/><line x1="1" y1="5" x2="9" y2="5"/></svg></div>
+        </button>
+        <div class="fq-a">Raw MediaPipe output jitters frame-to-frame due to detection noise. Without smoothing, a single noisy frame can trigger a false rep count. Exponential Moving Average applies weighted averaging — prioritising recent values while dampening spikes — the same technique used in motion capture pipelines. Alpha 0.35 was chosen for the balance between responsiveness and stability.</div>
+      </div>
+      <div class="fq">
+        <button class="fq-btn" onclick="tF(this)">
+          <span class="fq-q">Where is workout history stored?</span>
+          <div class="fq-ico"><svg viewBox="0 0 10 10" fill="none" stroke-width="1.5" stroke-linecap="round"><line x1="5" y1="1" x2="5" y2="9"/><line x1="1" y1="5" x2="9" y2="5"/></svg></div>
+        </button>
+        <div class="fq-a">Completed sets are written to a local SQLite file (data.db) on the server, grouped by username and date. The /api/analytics endpoint aggregates this into daily totals per exercise, which the frontend renders as a Chart.js bar chart. Deleting data.db resets all history.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="cta">
+  <div class="wrap">
+    <span class="cta-kicker">Ready when you are</span>
+    <h2 class="d1 cta-title">START YOUR<br><span style="color:var(--g)">FIRST SESSION</span></h2>
+    <p class="cta-desc">Open KINETIC in your browser. Allow camera access. Press Start Workout. That is the complete setup process.</p>
+    <div class="cta-acts">
+      <a href="/app" class="btn btn-gold btn-lg">
+        Open KINETIC app
+        <svg class="arr" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 6.5h9M7 2l4.5 4.5L7 11"/></svg>
+      </a>
+      <a href="https://github.com" class="btn btn-line btn-lg">View source code</a>
+    </div>
+    <p class="cta-note">Python &middot; FastAPI &middot; MediaPipe &middot; Groq LLM &middot; Vanilla JS</p>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <div class="logo">
+          <div class="logo-mark"><svg viewBox="0 0 16 16"><path d="M3 2h2l3 4.5L11 2h2L9.5 8 13 14h-2l-3-4.5L5 14H3l3.5-6L3 2z"/></svg></div>
+          <span class="logo-word">KINE<em>TIC</em></span>
+        </div>
+        <p>AI-powered real-time gym coach. No app, no wearable — just your browser and your effort.</p>
+      </div>
+      <div>
+        <div class="foot-col-ttl">Navigate</div>
+        <ul class="foot-links">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#how">How it works</a></li>
+          <li><a href="#exercises">Exercises</a></li>
+          <li><a href="#about">Tech stack</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="foot-col-ttl">Tech</div>
+        <ul class="foot-links">
+          <li><a href="#">FastAPI</a></li>
+          <li><a href="#">MediaPipe</a></li>
+          <li><a href="#">Groq LLM</a></li>
+          <li><a href="#">WebSocket</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="foot-col-ttl">Project</div>
+        <ul class="foot-links">
+          <li><a href="/app">Open app</a></li>
+          <li><a href="https://github.com">Source code</a></li>
+          <li><a href="#">README</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-btm">
+      <span class="foot-copy">KINETIC — Built with Python, MediaPipe, Groq, and FastAPI</span>
+      <span class="foot-by">Made by <span>Arnab</span></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+// nav scroll
+const navEl=document.getElementById('nav');
+window.addEventListener('scroll',()=>navEl.classList.toggle('scrolled',scrollY>20),{passive:true});
+
+// hamburger
+const hbg=document.getElementById('hbg'),mob=document.getElementById('mob');
+hbg.addEventListener('click',()=>{
+  hbg.classList.toggle('open');mob.classList.toggle('open');
+  document.body.style.overflow=mob.classList.contains('open')?'hidden':'';
+});
+function cM(){hbg.classList.remove('open');mob.classList.remove('open');document.body.style.overflow=''}
+document.addEventListener('click',e=>{if(!hbg.contains(e.target)&&!mob.contains(e.target))cM()});
+
+// faq
+function tF(btn){
+  const it=btn.closest('.fq'),op=it.classList.contains('open');
+  document.querySelectorAll('.fq.open').forEach(e=>e.classList.remove('open'));
+  if(!op)it.classList.add('open');
+}
+
+// scroll reveal
+const rvEls=document.querySelectorAll('.rv');
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');obs.unobserve(e.target)}});
+},{threshold:.1});
+rvEls.forEach(e=>obs.observe(e));
+
+// rep counter animation
+let rc=0,up=true;
+const rcEl=document.getElementById('rc');
+setInterval(()=>{
+  if(up){rc++;if(rc>=10)up=false}else{rc=0;up=true}
+  if(rcEl)rcEl.textContent=rc;
+},600);
+
+// squat skeleton animation
+const lt=document.getElementById('lt'),rt=document.getElementById('rt');
+const ls=document.getElementById('ls'),rs=document.getElementById('rs');
+const lk=document.getElementById('lk'),rk=document.getElementById('rk');
+let ph=0;
+const fr=[
+  {lt:[104,108,88,150],rt:[136,108,152,150],ls:[88,150,86,190],rs:[152,150,154,190],lk:[88,150],rk:[152,150]},
+  {lt:[104,108,82,142],rt:[136,108,158,142],ls:[82,142,78,184],rs:[158,142,162,184],lk:[82,142],rk:[158,142]},
+  {lt:[104,108,74,136],rt:[136,108,166,136],ls:[74,136,72,185],rs:[166,136,168,185],lk:[74,136],rk:[166,136]},
+  {lt:[104,108,82,142],rt:[136,108,158,142],ls:[82,142,78,184],rs:[158,142,162,184],lk:[82,142],rk:[158,142]},
+];
+function sL(el,x1,y1,x2,y2){el.setAttribute('x1',x1);el.setAttribute('y1',y1);el.setAttribute('x2',x2);el.setAttribute('y2',y2)}
+function sC(el,cx,cy){el.setAttribute('cx',cx);el.setAttribute('cy',cy)}
+setInterval(()=>{
+  const f=fr[ph];
+  sL(lt,...f.lt);sL(rt,...f.rt);sL(ls,...f.ls);sL(rs,...f.rs);
+  sC(lk,...f.lk);sC(rk,...f.rk);
+  ph=(ph+1)%fr.length;
+},720);
+</script>
+</body>
+</html>

@@ -1,0 +1,1707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KINETIC — AI-Powered Fitness Coach</title>
+  <meta name="description" content="Real-time AI gym coach. Pose detection, live form feedback, and voice coaching — all in your browser." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+
+/* ─────────────────────────────────────────────
+   TOKENS
+───────────────────────────────────────────── */
+:root {
+  --bg:         #07090F;
+  --bg-2:       #0D1117;
+  --bg-3:       #141A24;
+  --border:     #1E2733;
+  --border-2:   #253042;
+  --accent:     #4ADE80;
+  --accent-dim: rgba(74, 222, 128, 0.10);
+  --accent-mid: rgba(74, 222, 128, 0.22);
+  --tx-1:       #ECF0F5;
+  --tx-2:       #7B8EA8;
+  --tx-3:       #3D4F63;
+  --fd:         'Barlow Condensed', sans-serif;
+  --fb:         'DM Sans', sans-serif;
+  --fm:         'JetBrains Mono', monospace;
+  --max:        1160px;
+  --pad:        clamp(20px, 5vw, 80px);
+}
+
+/* ─────────────────────────────────────────────
+   RESET
+───────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 16px; }
+body {
+  font-family: var(--fb);
+  background: var(--bg);
+  color: var(--tx-1);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+a { color: inherit; text-decoration: none; }
+img { display: block; max-width: 100%; }
+button { font-family: var(--fb); cursor: pointer; }
+
+/* dot grid bg */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle, #1E2733 1px, transparent 1px);
+  background-size: 28px 28px;
+  opacity: 0.45;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─────────────────────────────────────────────
+   LAYOUT HELPERS
+───────────────────────────────────────────── */
+.container {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 0 var(--pad);
+  position: relative;
+  z-index: 1;
+}
+
+.section { padding: 96px 0; }
+.section + .section { border-top: 1px solid var(--border); }
+
+/* ─────────────────────────────────────────────
+   SCROLLBAR
+───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 99px; }
+
+/* ─────────────────────────────────────────────
+   TYPOGRAPHY
+───────────────────────────────────────────── */
+.label {
+  font-family: var(--fm);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.label::before {
+  content: '';
+  width: 18px;
+  height: 1px;
+  background: var(--accent);
+}
+
+.display {
+  font-family: var(--fd);
+  font-weight: 800;
+  line-height: 0.94;
+  letter-spacing: -0.01em;
+  color: var(--tx-1);
+}
+
+.body-text {
+  font-family: var(--fb);
+  font-weight: 300;
+  font-size: 1.05rem;
+  color: var(--tx-2);
+  line-height: 1.75;
+  max-width: 540px;
+}
+
+/* ─────────────────────────────────────────────
+   BUTTONS
+───────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 22px;
+  height: 44px;
+  font-family: var(--fb);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.12s;
+  white-space: nowrap;
+}
+.btn:active { transform: scale(0.98); }
+
+.btn-primary {
+  background: var(--accent);
+  color: #07090F;
+  font-weight: 600;
+}
+.btn-primary:hover { background: #5EE896; }
+
+.btn-outline {
+  background: transparent;
+  color: var(--tx-1);
+  border: 1px solid var(--border-2);
+}
+.btn-outline:hover { border-color: var(--tx-2); background: var(--bg-3); }
+
+.btn-lg { height: 52px; padding: 0 28px; font-size: 0.95rem; }
+
+/* arrow icon inside btn */
+.btn .arrow {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s;
+}
+.btn:hover .arrow { transform: translateX(3px); }
+
+/* ─────────────────────────────────────────────
+   NAV
+───────────────────────────────────────────── */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  height: 60px;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.3s, background 0.3s;
+}
+nav.scrolled {
+  background: rgba(7, 9, 15, 0.92);
+  backdrop-filter: blur(12px);
+  border-color: var(--border);
+}
+
+.nav-inner {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-shrink: 0;
+}
+.nav-logo-mark {
+  width: 26px;
+  height: 26px;
+  background: var(--accent);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nav-logo-mark svg { width: 14px; height: 14px; fill: #07090F; }
+.nav-logo-word {
+  font-family: var(--fd);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--tx-1);
+}
+.nav-logo-word span { color: var(--accent); }
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  list-style: none;
+}
+.nav-links a {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--tx-2);
+  transition: color 0.15s;
+  letter-spacing: 0.02em;
+}
+.nav-links a:hover { color: var(--tx-1); }
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Hamburger */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 36px;
+  height: 36px;
+  padding: 6px;
+  background: none;
+  border: 1px solid var(--border-2);
+  border-radius: 5px;
+  cursor: pointer;
+}
+.hamburger span {
+  display: block;
+  width: 100%;
+  height: 1.5px;
+  background: var(--tx-1);
+  border-radius: 99px;
+  transition: transform 0.25s, opacity 0.25s;
+  transform-origin: center;
+}
+.hamburger.open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.hamburger.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+
+/* Mobile menu */
+.mobile-menu {
+  display: none;
+  position: fixed;
+  inset: 60px 0 0;
+  background: var(--bg);
+  z-index: 99;
+  padding: 32px var(--pad);
+  flex-direction: column;
+  gap: 0;
+  border-top: 1px solid var(--border);
+  overflow-y: auto;
+}
+.mobile-menu.open { display: flex; }
+.mobile-menu a {
+  display: block;
+  padding: 16px 0;
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: var(--tx-2);
+  border-bottom: 1px solid var(--border);
+  transition: color 0.15s;
+}
+.mobile-menu a:hover { color: var(--tx-1); }
+.mobile-menu .btn {
+  margin-top: 24px;
+  width: 100%;
+  justify-content: center;
+}
+
+/* ─────────────────────────────────────────────
+   HERO
+───────────────────────────────────────────── */
+#hero {
+  padding-top: 120px;
+  padding-bottom: 96px;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* accent glow — not glassmorphic, just ambient light */
+#hero::after {
+  content: '';
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(74, 222, 128, 0.055) 0%, transparent 70%);
+  top: -100px;
+  right: -100px;
+  pointer-events: none;
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+}
+
+.hero-eyebrow { margin-bottom: 20px; }
+
+.hero-title {
+  font-size: clamp(3.8rem, 8vw, 7rem);
+  margin-bottom: 28px;
+}
+
+.hero-title .line-2 { color: var(--accent); }
+
+.hero-desc {
+  margin-bottom: 36px;
+  font-size: 1.05rem;
+  line-height: 1.75;
+  color: var(--tx-2);
+  font-weight: 300;
+  max-width: 460px;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.hero-note {
+  font-size: 0.75rem;
+  color: var(--tx-3);
+  margin-top: 18px;
+  font-family: var(--fm);
+  letter-spacing: 0.04em;
+}
+
+/* Hero visual — stylised pose card */
+.hero-visual {
+  position: relative;
+}
+
+.hero-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.hero-card-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hero-card-label {
+  font-family: var(--fd);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(74, 222, 128, 0.6);
+  animation: blink 2s ease-in-out infinite;
+}
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.hero-pose-area {
+  padding: 28px 18px;
+  display: flex;
+  justify-content: center;
+  background: var(--bg);
+}
+
+/* Animated skeleton SVG */
+.hero-skeleton svg { display: block; }
+
+.hero-metrics-row {
+  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.hm-card {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+.hm-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--tx-3);
+  margin-bottom: 4px;
+}
+.hm-value {
+  font-family: var(--fm);
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--tx-1);
+}
+.hm-value.green { color: var(--accent); }
+
+/* floating coach tip */
+.hero-coach-tip {
+  position: absolute;
+  right: -20px;
+  bottom: 70px;
+  background: var(--bg-3);
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.78rem;
+  color: var(--tx-2);
+  max-width: 195px;
+  line-height: 1.5;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  animation: float 4s ease-in-out infinite;
+}
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.hero-coach-tip strong { color: var(--accent); font-weight: 500; }
+.hero-coach-tip::before {
+  content: '';
+  position: absolute;
+  top: -1px; left: 14px;
+  width: 6px; height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+}
+
+/* ─────────────────────────────────────────────
+   STATS BAR
+───────────────────────────────────────────── */
+#stats {
+  padding: 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.stats-inner {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.stat-item {
+  padding: 40px 32px;
+  border-right: 1px solid var(--border);
+  position: relative;
+}
+.stat-item:last-child { border-right: none; }
+
+.stat-num {
+  font-family: var(--fd);
+  font-size: clamp(2.2rem, 4vw, 3rem);
+  font-weight: 800;
+  color: var(--tx-1);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.stat-num span { color: var(--accent); }
+
+.stat-desc {
+  font-size: 0.82rem;
+  color: var(--tx-2);
+  line-height: 1.5;
+}
+
+/* ─────────────────────────────────────────────
+   FEATURES / ABOUT
+───────────────────────────────────────────── */
+#features .section-header {
+  margin-bottom: 64px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: end;
+}
+
+.section-title {
+  font-family: var(--fd);
+  font-size: clamp(2.4rem, 5vw, 3.6rem);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+}
+
+.section-title span { color: var(--accent); }
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.feature-card {
+  background: var(--bg-2);
+  padding: 36px 32px;
+  transition: background 0.2s;
+  position: relative;
+}
+.feature-card:hover { background: var(--bg-3); }
+
+.feature-icon {
+  width: 40px;
+  height: 40px;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-mid);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.feature-icon svg { width: 18px; height: 18px; stroke: var(--accent); }
+
+.feature-title {
+  font-family: var(--fd);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--tx-1);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.feature-desc {
+  font-size: 0.875rem;
+  color: var(--tx-2);
+  line-height: 1.7;
+  font-weight: 300;
+}
+
+/* ─────────────────────────────────────────────
+   HOW IT WORKS
+───────────────────────────────────────────── */
+#how .section-header { margin-bottom: 64px; }
+
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  position: relative;
+}
+
+/* horizontal connector line */
+.steps-grid::before {
+  content: '';
+  position: absolute;
+  top: 26px;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: var(--border-2);
+  z-index: 0;
+}
+
+.step-item {
+  position: relative;
+  z-index: 1;
+  padding: 0 20px;
+  text-align: center;
+}
+.step-item:first-child { padding-left: 0; text-align: left; }
+.step-item:last-child  { padding-right: 0; text-align: right; }
+
+.step-num {
+  width: 52px;
+  height: 52px;
+  border: 1px solid var(--border-2);
+  border-radius: 50%;
+  background: var(--bg-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--fm);
+  font-size: 0.8rem;
+  color: var(--tx-2);
+  margin: 0 auto 20px;
+}
+.step-item:first-child .step-num { margin: 0 auto 20px 0; }
+.step-item:last-child  .step-num { margin: 0 0 20px auto; }
+
+.step-num.active {
+  background: var(--accent-dim);
+  border-color: var(--accent-mid);
+  color: var(--accent);
+}
+
+.step-title {
+  font-family: var(--fd);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tx-1);
+  margin-bottom: 8px;
+}
+
+.step-desc {
+  font-size: 0.82rem;
+  color: var(--tx-2);
+  line-height: 1.65;
+  font-weight: 300;
+}
+
+/* ─────────────────────────────────────────────
+   EXERCISES
+───────────────────────────────────────────── */
+#exercises .section-header { margin-bottom: 48px; }
+
+.exercises-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.exercise-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 22px 18px;
+  transition: border-color 0.2s, background 0.2s;
+  cursor: default;
+}
+.exercise-card:hover {
+  border-color: var(--border-2);
+  background: var(--bg-3);
+}
+.exercise-card:hover .ex-num { color: var(--accent); }
+
+.ex-num {
+  font-family: var(--fm);
+  font-size: 0.65rem;
+  color: var(--tx-3);
+  margin-bottom: 12px;
+  transition: color 0.2s;
+}
+
+.ex-name {
+  font-family: var(--fd);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tx-1);
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+
+.ex-tag {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-family: var(--fm);
+  letter-spacing: 0.06em;
+  color: var(--tx-3);
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 2px 7px;
+}
+
+/* ─────────────────────────────────────────────
+   ABOUT (TECHNICAL)
+───────────────────────────────────────────── */
+#about {
+  background: var(--bg-2);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.about-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
+}
+
+.tech-list {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.tech-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.tech-row:first-child { border-top: 1px solid var(--border); }
+
+.tech-name {
+  font-family: var(--fm);
+  font-size: 0.82rem;
+  color: var(--tx-2);
+}
+
+.tech-badge {
+  font-family: var(--fm);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-mid);
+  border-radius: 3px;
+  padding: 2px 8px;
+}
+
+.about-visual {
+  position: relative;
+}
+
+.code-block {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.code-block-header {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dot-row { display: flex; gap: 6px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; }
+.dot-r { background: #F87171; }
+.dot-y { background: #FBBF24; }
+.dot-g { background: var(--accent); }
+
+.code-file {
+  font-family: var(--fm);
+  font-size: 0.72rem;
+  color: var(--tx-3);
+  margin-left: 8px;
+}
+
+.code-body {
+  padding: 20px 22px;
+  font-family: var(--fm);
+  font-size: 0.78rem;
+  line-height: 2;
+  overflow-x: auto;
+}
+
+.c-comment { color: var(--tx-3); }
+.c-kw  { color: #60A5FA; }
+.c-fn  { color: var(--accent); }
+.c-str { color: #F59E0B; }
+.c-num { color: #FB7185; }
+.c-tx  { color: var(--tx-2); }
+
+/* ─────────────────────────────────────────────
+   FAQ
+───────────────────────────────────────────── */
+#faq .section-header { margin-bottom: 52px; }
+
+.faq-list {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.faq-item {
+  border-bottom: 1px solid var(--border);
+}
+.faq-item:first-child { border-top: 1px solid var(--border); }
+
+.faq-question {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 22px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.faq-q-text {
+  font-family: var(--fd);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--tx-1);
+  line-height: 1.3;
+}
+
+.faq-icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border-2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, border-color 0.2s, transform 0.25s;
+}
+.faq-icon svg {
+  width: 10px;
+  height: 10px;
+  stroke: var(--tx-2);
+  transition: stroke 0.2s;
+}
+
+.faq-item.open .faq-icon {
+  background: var(--accent-dim);
+  border-color: var(--accent-mid);
+  transform: rotate(45deg);
+}
+.faq-item.open .faq-icon svg { stroke: var(--accent); }
+
+.faq-answer {
+  display: none;
+  padding-bottom: 22px;
+  font-size: 0.9rem;
+  color: var(--tx-2);
+  line-height: 1.75;
+  font-weight: 300;
+  max-width: 660px;
+}
+.faq-item.open .faq-answer { display: block; }
+
+/* ─────────────────────────────────────────────
+   CTA SECTION
+───────────────────────────────────────────── */
+#cta {
+  padding: 110px 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+#cta::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 700px 400px at center, rgba(74, 222, 128, 0.055) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.cta-label { justify-content: center; }
+.cta-title {
+  font-size: clamp(3rem, 6vw, 5.5rem);
+  margin-bottom: 24px;
+}
+.cta-desc {
+  font-size: 1rem;
+  color: var(--tx-2);
+  font-weight: 300;
+  line-height: 1.7;
+  max-width: 480px;
+  margin: 0 auto 40px;
+}
+.cta-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* ─────────────────────────────────────────────
+   FOOTER
+───────────────────────────────────────────── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 48px 0 32px;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 64px;
+  align-items: start;
+  margin-bottom: 40px;
+}
+
+.footer-brand-desc {
+  font-size: 0.82rem;
+  color: var(--tx-3);
+  line-height: 1.65;
+  margin-top: 12px;
+  max-width: 220px;
+}
+
+.footer-col-title {
+  font-family: var(--fm);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tx-3);
+  margin-bottom: 16px;
+}
+
+.footer-links {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.footer-links a {
+  font-size: 0.85rem;
+  color: var(--tx-2);
+  transition: color 0.15s;
+}
+.footer-links a:hover { color: var(--tx-1); }
+
+.footer-bottom {
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.footer-copy {
+  font-size: 0.75rem;
+  color: var(--tx-3);
+  font-family: var(--fm);
+}
+
+.footer-tag {
+  font-family: var(--fm);
+  font-size: 0.7rem;
+  color: var(--tx-3);
+}
+.footer-tag span { color: var(--accent); }
+
+/* ─────────────────────────────────────────────
+   ANIMATIONS (entrance)
+───────────────────────────────────────────── */
+.reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
+
+/* ─────────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────────── */
+@media (max-width: 1000px) {
+  .hero-grid       { grid-template-columns: 1fr; gap: 48px; }
+  .hero-visual     { max-width: 460px; margin: 0 auto; }
+  .hero-coach-tip  { display: none; }
+  .stats-inner     { grid-template-columns: repeat(2, 1fr); }
+  .stat-item:nth-child(2) { border-right: none; }
+  .stat-item:nth-child(3) { border-right: 1px solid var(--border); border-top: 1px solid var(--border); }
+  .stat-item:nth-child(4) { border-top: 1px solid var(--border); border-right: none; }
+  #features .section-header { grid-template-columns: 1fr; gap: 16px; }
+  .features-grid   { grid-template-columns: 1fr 1fr; }
+  .steps-grid      { grid-template-columns: 1fr 1fr; gap: 32px; }
+  .steps-grid::before { display: none; }
+  .step-item, .step-item:first-child, .step-item:last-child { text-align: left; padding: 0; }
+  .step-item .step-num,
+  .step-item:first-child .step-num,
+  .step-item:last-child  .step-num { margin: 0 0 16px; }
+  .exercises-grid  { grid-template-columns: repeat(3, 1fr); }
+  .about-grid      { grid-template-columns: 1fr; gap: 48px; }
+  .footer-grid     { grid-template-columns: 1fr 1fr; gap: 36px; }
+  .footer-grid > div:first-child { grid-column: 1/-1; }
+}
+
+@media (max-width: 700px) {
+  .section { padding: 64px 0; }
+  .nav-links, .nav-actions { display: none; }
+  .hamburger { display: flex; }
+  .features-grid  { grid-template-columns: 1fr; }
+  .steps-grid     { grid-template-columns: 1fr; }
+  .exercises-grid { grid-template-columns: 1fr 1fr; }
+  .footer-grid    { grid-template-columns: 1fr; gap: 28px; }
+  .footer-grid > div:first-child { grid-column: auto; }
+}
+
+@media (max-width: 400px) {
+  .exercises-grid { grid-template-columns: 1fr; }
+}
+
+/* Skeleton animation */
+@keyframes rep-anim {
+  0%   { d: path("M110 40 L110 90"); }
+  50%  { d: path("M110 40 L108 92"); }
+  100% { d: path("M110 40 L110 90"); }
+}
+
+.skel-bone { stroke: #4ADE80; stroke-width: 3; stroke-linecap: round; fill: none; opacity: 0.85; }
+.skel-joint { fill: #fff; }
+
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════
+     NAV
+═══════════════════════════════════════════════════════════════ -->
+<nav id="main-nav">
+  <div class="container nav-inner">
+    <a href="#hero" class="nav-logo">
+      <div class="nav-logo-mark">
+        <svg viewBox="0 0 16 16"><path d="M3 2h2l3 4.5L11 2h2L9.5 8 13 14h-2l-3-4.5L5 14H3l3.5-6L3 2z"/></svg>
+      </div>
+      <span class="nav-logo-word">KINE<span>TIC</span></span>
+    </a>
+
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#about">Tech</a></li>
+      <li><a href="#exercises">Exercises</a></li>
+      <li><a href="#faq">FAQ</a></li>
+    </ul>
+
+    <div class="nav-actions">
+      <a href="#cta" class="btn btn-outline">Learn more</a>
+      <a href="/app" class="btn btn-primary">
+        Open app
+        <svg class="arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 7h10M7 2l5 5-5 5"/></svg>
+      </a>
+    </div>
+
+    <button class="hamburger" id="hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- Mobile menu -->
+<div class="mobile-menu" id="mobile-menu">
+  <a href="#features" onclick="closeMobile()">Features</a>
+  <a href="#how" onclick="closeMobile()">How it works</a>
+  <a href="#about" onclick="closeMobile()">Tech stack</a>
+  <a href="#exercises" onclick="closeMobile()">Exercises</a>
+  <a href="#faq" onclick="closeMobile()">FAQ</a>
+  <a href="/app" class="btn btn-primary">Open KINETIC app</a>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     HERO
+═══════════════════════════════════════════════════════════════ -->
+<section id="hero">
+  <div class="container">
+    <div class="hero-grid">
+      <div>
+        <div class="label hero-eyebrow">Real-time AI fitness coach</div>
+
+        <h1 class="display hero-title">
+          <span class="line-1">TRAIN</span><br>
+          <span class="line-2">SMARTER</span><br>
+          <span class="line-1">MOVE BETTER</span>
+        </h1>
+
+        <p class="hero-desc">
+          KINETIC watches your form in real-time using computer vision, counts your reps, and gives you live voice coaching — no wearable, no trainer needed.
+        </p>
+
+        <div class="hero-actions">
+          <a href="/app" class="btn btn-primary btn-lg">
+            Start training now
+            <svg class="arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 7h10M7 2l5 5-5 5"/></svg>
+          </a>
+          <a href="#how" class="btn btn-outline btn-lg">See how it works</a>
+        </div>
+
+        <p class="hero-note">No account required &middot; Camera access only &middot; Runs in your browser</p>
+      </div>
+
+      <div class="hero-visual">
+        <div class="hero-card">
+          <div class="hero-card-header">
+            <span class="hero-card-label">Live session</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-family:var(--fm);font-size:.65rem;color:var(--tx-3)">SQUATS</span>
+              <div class="live-dot"></div>
+            </div>
+          </div>
+
+          <div class="hero-pose-area">
+            <div class="hero-skeleton">
+              <svg viewBox="0 0 240 200" width="240" height="200" xmlns="http://www.w3.org/2000/svg">
+                <!-- SQUAT SKELETON — standing upright pose -->
+                <!-- torso -->
+                <line class="skel-bone" x1="120" y1="45" x2="120" y2="105"/>
+                <!-- shoulders -->
+                <line class="skel-bone" x1="120" y1="60" x2="92" y2="76"/>
+                <line class="skel-bone" x1="120" y1="60" x2="148" y2="76"/>
+                <!-- arms -->
+                <line class="skel-bone" x1="92" y1="76" x2="80" y2="100"/>
+                <line class="skel-bone" x1="148" y1="76" x2="160" y2="100"/>
+                <!-- hips -->
+                <line class="skel-bone" x1="120" y1="105" x2="104" y2="108"/>
+                <line class="skel-bone" x1="120" y1="105" x2="136" y2="108"/>
+                <!-- thighs (squatting) -->
+                <line class="skel-bone" id="left-thigh"  x1="104" y1="108" x2="88"  y2="150"/>
+                <line class="skel-bone" id="right-thigh" x1="136" y1="108" x2="152" y2="150"/>
+                <!-- shins -->
+                <line class="skel-bone" id="left-shin"   x1="88"  y1="150" x2="86"  y2="190"/>
+                <line class="skel-bone" id="right-shin"  x1="152" y1="150" x2="154" y2="190"/>
+                <!-- head -->
+                <circle cx="120" cy="32" r="13" class="skel-bone"/>
+                <!-- joints -->
+                <circle class="skel-joint" cx="120" cy="45" r="4"/>
+                <circle class="skel-joint" cx="120" cy="60" r="3.5"/>
+                <circle class="skel-joint" cx="92"  cy="76" r="3.5"/>
+                <circle class="skel-joint" cx="148" cy="76" r="3.5"/>
+                <circle class="skel-joint" cx="80"  cy="100" r="3"/>
+                <circle class="skel-joint" cx="160" cy="100" r="3"/>
+                <circle class="skel-joint" cx="120" cy="105" r="4"/>
+                <circle class="skel-joint" cx="104" cy="108" r="3.5"/>
+                <circle class="skel-joint" cx="136" cy="108" r="3.5"/>
+                <circle class="skel-joint" id="left-knee"  cx="88"  cy="150" r="4"/>
+                <circle class="skel-joint" id="right-knee" cx="152" cy="150" r="4"/>
+                <circle class="skel-joint" cx="86"  cy="190" r="3"/>
+                <circle class="skel-joint" cx="154" cy="190" r="3"/>
+                <!-- overlay text -->
+                <text x="10" y="195" fill="#4ADE80" font-family="JetBrains Mono,monospace" font-size="9" font-weight="500">DEPTH: GOOD</text>
+                <text x="164" y="195" fill="#4ADE80" font-family="JetBrains Mono,monospace" font-size="9" font-weight="500">94°</text>
+              </svg>
+            </div>
+          </div>
+
+          <div class="hero-metrics-row">
+            <div class="hm-card">
+              <div class="hm-label">Reps</div>
+              <div class="hm-value green" id="rep-counter">0</div>
+            </div>
+            <div class="hm-card">
+              <div class="hm-label">Set</div>
+              <div class="hm-value">2 / 3</div>
+            </div>
+            <div class="hm-card">
+              <div class="hm-label">Form</div>
+              <div class="hm-value green">Good</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-coach-tip">
+          <strong>Coach:</strong> Drive through your heels on the way up — good depth on that rep.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     STATS
+═══════════════════════════════════════════════════════════════ -->
+<div id="stats">
+  <div class="container" style="padding:0">
+    <div class="stats-inner">
+      <div class="stat-item reveal">
+        <div class="stat-num">5<span>+</span></div>
+        <div class="stat-desc">Exercises with full pose tracking and form analysis</div>
+      </div>
+      <div class="stat-item reveal reveal-delay-1">
+        <div class="stat-num">30<span>fps</span></div>
+        <div class="stat-desc">Real-time pose estimation at up to 30 frames per second</div>
+      </div>
+      <div class="stat-item reveal reveal-delay-2">
+        <div class="stat-num">0<span>ms</span></div>
+        <div class="stat-desc">Installation time. Runs entirely in your browser</div>
+      </div>
+      <div class="stat-item reveal reveal-delay-3">
+        <div class="stat-num">AI<span>+</span></div>
+        <div class="stat-desc">LLM-driven voice coaching that analyses your form live</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     FEATURES
+═══════════════════════════════════════════════════════════════ -->
+<section id="features" class="section">
+  <div class="container">
+    <div class="section-header">
+      <div>
+        <div class="label">What it does</div>
+        <h2 class="section-title">Built around<br><span>real coaching</span></h2>
+      </div>
+      <p class="body-text">
+        Every feature in KINETIC exists to make your training more accurate and more effective — not to look impressive in a demo.
+      </p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <div class="feature-title">Real-Time Pose Tracking</div>
+        <div class="feature-desc">MediaPipe Pose Landmarker runs on every frame. 33 body landmarks tracked with visibility scoring and EMA angle smoothing to eliminate jitter.</div>
+      </div>
+
+      <div class="feature-card reveal reveal-delay-1">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </div>
+        <div class="feature-title">Automatic Rep Counting</div>
+        <div class="feature-desc">Joint angle thresholds detect up and down phases precisely. No button pressing — just perform the movement and KINETIC counts.</div>
+      </div>
+
+      <div class="feature-card reveal reveal-delay-2">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/></svg>
+        </div>
+        <div class="feature-title">AI Form Analysis</div>
+        <div class="feature-desc">Raw pose metrics are sent to an LLM which infers form issues from joint angles and flags — no hardcoded rules. The coaching adapts to what it actually sees.</div>
+      </div>
+
+      <div class="feature-card reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        </div>
+        <div class="feature-title">Voice Coaching</div>
+        <div class="feature-desc">Text-to-speech feedback delivered at the right moment — on set completion, when form breaks down, or when no pose is detected. Hands-free, eyes on the workout.</div>
+      </div>
+
+      <div class="feature-card reveal reveal-delay-1">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        </div>
+        <div class="feature-title">Progress Analytics</div>
+        <div class="feature-desc">Daily workout history stored in SQLite. Reps, sets, and duration tracked per exercise per session. Bar charts show progress over time across exercises.</div>
+      </div>
+
+      <div class="feature-card reveal reveal-delay-2">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <div class="feature-title">Browser-Native</div>
+        <div class="feature-desc">No app install. No wearable. Just a webcam and a browser. Camera frames are processed server-side via WebSocket — session state persists through brief disconnects.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     HOW IT WORKS
+═══════════════════════════════════════════════════════════════ -->
+<section id="how" class="section">
+  <div class="container">
+    <div class="section-header">
+      <div class="label">Process</div>
+      <h2 class="section-title">From camera to<br><span>coaching</span> in milliseconds</h2>
+    </div>
+
+    <div class="steps-grid reveal">
+      <div class="step-item">
+        <div class="step-num active">01</div>
+        <div class="step-title">Set your workout</div>
+        <div class="step-desc">Choose an exercise, set your target sets and reps. No account needed — just enter a username and start.</div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">02</div>
+        <div class="step-title">Camera streams frames</div>
+        <div class="step-desc">Your webcam sends JPEG frames over a WebSocket to the server. Ack-based flow control ensures no lag buildup.</div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">03</div>
+        <div class="step-title">AI analyses pose</div>
+        <div class="step-desc">MediaPipe detects 33 landmarks per frame. EMA smoothing cleans the signal. Exercise-specific detectors count reps and flag form issues.</div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">04</div>
+        <div class="step-title">Coaching delivered</div>
+        <div class="step-desc">Raw metrics go to an LLM which decides what to say. Text-to-speech plays the feedback aloud while the annotated frame renders in your browser.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     EXERCISES
+═══════════════════════════════════════════════════════════════ -->
+<section id="exercises" class="section">
+  <div class="container">
+    <div class="section-header">
+      <div class="label">Supported movements</div>
+      <h2 class="section-title">Five exercises,<br><span>fully tracked</span></h2>
+    </div>
+
+    <div class="exercises-grid">
+      <div class="exercise-card reveal">
+        <div class="ex-num">01</div>
+        <div class="ex-name">Squats</div>
+        <span class="ex-tag">Legs</span>
+      </div>
+      <div class="exercise-card reveal reveal-delay-1">
+        <div class="ex-num">02</div>
+        <div class="ex-name">Push-ups</div>
+        <span class="ex-tag">Upper body</span>
+      </div>
+      <div class="exercise-card reveal reveal-delay-2">
+        <div class="ex-num">03</div>
+        <div class="ex-name">Biceps Curls</div>
+        <span class="ex-tag">Arms</span>
+      </div>
+      <div class="exercise-card reveal reveal-delay-1">
+        <div class="ex-num">04</div>
+        <div class="ex-name">Shoulder Press</div>
+        <span class="ex-tag">Shoulders</span>
+      </div>
+      <div class="exercise-card reveal reveal-delay-2">
+        <div class="ex-num">05</div>
+        <div class="ex-name">Lunges</div>
+        <span class="ex-tag">Legs</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     ABOUT / TECH
+═══════════════════════════════════════════════════════════════ -->
+<section id="about" class="section">
+  <div class="container">
+    <div class="about-grid">
+      <div>
+        <div class="label">Under the hood</div>
+        <h2 class="section-title" style="margin-bottom:16px">Built on<br><span>production tech</span></h2>
+        <p class="body-text" style="margin-bottom:0">
+          KINETIC is a full-stack Python application — not a wrapper around a fitness API. Every component was chosen for real-world performance and explainability.
+        </p>
+
+        <div class="tech-list">
+          <div class="tech-row">
+            <span class="tech-name">FastAPI + uvicorn</span>
+            <span class="tech-badge">Backend</span>
+          </div>
+          <div class="tech-row">
+            <span class="tech-name">MediaPipe Pose Landmarker</span>
+            <span class="tech-badge">ML / Vision</span>
+          </div>
+          <div class="tech-row">
+            <span class="tech-name">EMA Angle Smoothing</span>
+            <span class="tech-badge">Signal Processing</span>
+          </div>
+          <div class="tech-row">
+            <span class="tech-name">Groq LLaMA-3.3-70B</span>
+            <span class="tech-badge">LLM</span>
+          </div>
+          <div class="tech-row">
+            <span class="tech-name">gTTS Text-to-Speech</span>
+            <span class="tech-badge">Voice</span>
+          </div>
+          <div class="tech-row">
+            <span class="tech-name">WebSocket (ack-based)</span>
+            <span class="tech-badge">Real-time</span>
+          </div>
+          <div class="tech-row">
+            <span class="tech-name">SQLite + Chart.js</span>
+            <span class="tech-badge">Data</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="about-visual reveal">
+        <div class="code-block">
+          <div class="code-block-header">
+            <div class="dot-row">
+              <div class="dot dot-r"></div>
+              <div class="dot dot-y"></div>
+              <div class="dot dot-g"></div>
+            </div>
+            <span class="code-file">frame_processor.py</span>
+          </div>
+          <div class="code-body">
+<span class="c-comment"># EMA smoothing for joint angles</span>
+<span class="c-kw">class</span> <span class="c-fn">AngleSmoother</span>:
+&nbsp;&nbsp;<span class="c-tx">ALPHA</span> <span class="c-tx">=</span> <span class="c-num">0.35</span>
+
+&nbsp;&nbsp;<span class="c-kw">def</span> <span class="c-fn">smooth</span>(<span class="c-tx">self, metrics</span>):
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-kw">for</span> <span class="c-tx">key</span> <span class="c-kw">in</span> <span class="c-tx">self.ANGLE_KEYS</span>:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-tx">raw</span> <span class="c-tx">=</span> <span class="c-tx">metrics[key]</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-tx">smoothed</span> <span class="c-tx">=</span> (
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-tx">self.ALPHA</span> <span class="c-tx">*</span> <span class="c-tx">raw</span> <span class="c-tx">+</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="c-num">1</span> <span class="c-tx">-</span> <span class="c-tx">self.ALPHA</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-tx">*</span> <span class="c-tx">self._state[key]</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-tx">metrics[key]</span> <span class="c-tx">=</span> <span class="c-fn">round</span>(<span class="c-tx">smoothed</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-kw">return</span> <span class="c-tx">metrics</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     FAQ
+═══════════════════════════════════════════════════════════════ -->
+<section id="faq" class="section">
+  <div class="container">
+    <div class="section-header" style="margin-bottom:52px">
+      <div class="label">FAQ</div>
+      <h2 class="section-title">Common<br><span>questions</span></h2>
+    </div>
+
+    <div class="faq-list">
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span class="faq-q-text">Do I need to create an account or install anything?</span>
+          <div class="faq-icon"><svg viewBox="0 0 10 10" fill="none" stroke-width="1.5" stroke-linecap="round"><line x1="5" y1="1" x2="5" y2="9"/><line x1="1" y1="5" x2="9" y2="5"/></svg></div>
+        </button>
+        <div class="faq-answer">No installation, no sign-up. KINETIC runs entirely in your browser. You enter a username (which identifies your workout history locally) and start training immediately. The only requirement is camera access permission.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span class="faq-q-text">Does KINETIC send my camera feed to a server?</span>
+          <div class="faq-icon"><svg viewBox="0 0 10 10" fill="none" stroke-width="1.5" stroke-linecap="round"><line x1="5" y1="1" x2="5" y2="9"/><line x1="1" y1="5" x2="9" y2="5"/></svg></div>
+        </button>
+        <div class="faq-answer">Yes — frames are sent over a secure WebSocket to the backend where MediaPipe processes them server-side. Frames are not stored. Only the resulting rep count, set progress, and form metrics are returned to your browser. No video is saved at any point.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span class="faq-q-text">How does the AI know if my form is bad?</span>
+          <div class="faq-icon"><svg viewBox="0 0 10 10" fill="none" stroke-width="1.5" stroke-linecap="round"><line x1="5" y1="1" x2="5" y2="9"/><line x1="1" y1="5" x2="9" y2="5"/></svg></div>
+        </button>
+        <div class="faq-answer">Raw joint angles and pose status flags (depth, alignment, swing, etc.) are extracted from MediaPipe and sent directly to a large language model (LLaMA-3.3-70B via Groq). The LLM analyses these numbers itself and decides what coaching cue to give — there are no hardcoded if/else rules for form detection.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span class="faq-q-text">What exercises are currently supported?</span>
+          <div class="faq-icon"><svg viewBox="0 0 10 10" fill="none" stroke-width="1.5" stroke-linecap="round"><line x1="5" y1="1" x2="5" y2="9"/><line x1="1" y1="5" x2="9" y2="5"/></svg></div>
+        </button>
+        <div class="faq-answer">Five exercises are currently supported with full form analysis: Squats, Push-ups, Biceps Curls (Dumbbell), Shoulder Press, and Lunges. Each has a dedicated detector with exercise-specific angle thresholds and status flags.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span class="faq-q-text">Does the voice coaching work without a Groq API key?</span>
+          <div class="faq-icon"><svg viewBox="0 0 10 10" fill="none" stroke-width="1.5" stroke-linecap="round"><line x1="5" y1="1" x2="5" y2="9"/><line x1="1" y1="5" x2="9" y2="5"/></svg></div>
+        </button>
+        <div class="faq-answer">The app works fully without a Groq API key — you will have real-time pose tracking, rep counting, form metrics, and progress history. The voice coaching feature requires setting the GROQ_API_KEY environment variable before starting the server.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          <span class="faq-q-text">How is workout history stored?</span>
+          <div class="faq-icon"><svg viewBox="0 0 10 10" fill="none" stroke-width="1.5" stroke-linecap="round"><line x1="5" y1="1" x2="5" y2="9"/><line x1="1" y1="5" x2="9" y2="5"/></svg></div>
+        </button>
+        <div class="faq-answer">Completed sets are written to a local SQLite database (data.db) on the server, keyed by your username. The analytics endpoint groups these by exercise and date for the progress chart. Clearing the database resets all history.</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     CTA
+═══════════════════════════════════════════════════════════════ -->
+<section id="cta" class="section">
+  <div class="container">
+    <div class="label cta-label">Ready to train</div>
+    <h2 class="display cta-title">START YOUR<br><span style="color:var(--accent)">FIRST SESSION</span></h2>
+    <p class="cta-desc">Open KINETIC in your browser. Allow camera access. Press Start Workout. That is the entire setup.</p>
+    <div class="cta-actions">
+      <a href="/app" class="btn btn-primary btn-lg">
+        Open KINETIC app
+        <svg class="arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 7h10M7 2l5 5-5 5"/></svg>
+      </a>
+      <a href="https://github.com" class="btn btn-outline btn-lg">View source</a>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     FOOTER
+═══════════════════════════════════════════════════════════════ -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="nav-logo" style="margin-bottom:10px">
+          <div class="nav-logo-mark">
+            <svg viewBox="0 0 16 16"><path d="M3 2h2l3 4.5L11 2h2L9.5 8 13 14h-2l-3-4.5L5 14H3l3.5-6L3 2z"/></svg>
+          </div>
+          <span class="nav-logo-word">KINE<span>TIC</span></span>
+        </div>
+        <p class="footer-brand-desc">AI-powered real-time gym coach. No app, no wearable — just your browser and your effort.</p>
+      </div>
+
+      <div>
+        <div class="footer-col-title">Navigate</div>
+        <ul class="footer-links">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#how">How it works</a></li>
+          <li><a href="#exercises">Exercises</a></li>
+          <li><a href="#about">Tech stack</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="footer-col-title">Tech</div>
+        <ul class="footer-links">
+          <li><a href="#">FastAPI</a></li>
+          <li><a href="#">MediaPipe</a></li>
+          <li><a href="#">Groq LLM</a></li>
+          <li><a href="#">WebSocket</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="footer-col-title">Project</div>
+        <ul class="footer-links">
+          <li><a href="/app">Open app</a></li>
+          <li><a href="https://github.com">Source code</a></li>
+          <li><a href="#">README</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span class="footer-copy">KINETIC — Built with Python, MediaPipe, and FastAPI</span>
+      <span class="footer-tag">Made by <span>Arnab</span></span>
+    </div>
+  </div>
+</footer>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     JS
+═══════════════════════════════════════════════════════════════ -->
+<script>
+// Nav scroll
+const nav = document.getElementById('main-nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 20);
+}, { passive: true });
+
+// Hamburger
+const hamburger = document.getElementById('hamburger');
+const mobileMenu = document.getElementById('mobile-menu');
+
+hamburger.addEventListener('click', () => {
+  hamburger.classList.toggle('open');
+  mobileMenu.classList.toggle('open');
+  document.body.style.overflow = mobileMenu.classList.contains('open') ? 'hidden' : '';
+});
+
+function closeMobile() {
+  hamburger.classList.remove('open');
+  mobileMenu.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Close mobile menu on outside click
+document.addEventListener('click', (e) => {
+  if (!hamburger.contains(e.target) && !mobileMenu.contains(e.target)) {
+    closeMobile();
+  }
+});
+
+// FAQ accordion
+function toggleFaq(btn) {
+  const item = btn.closest('.faq-item');
+  const isOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
+  if (!isOpen) item.classList.add('open');
+}
+
+// Scroll reveal
+const revealEls = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.12 });
+
+revealEls.forEach(el => observer.observe(el));
+
+// Animated rep counter in hero card
+let repCount = 0;
+let goingUp = true;
+const repEl = document.getElementById('rep-counter');
+
+setInterval(() => {
+  if (goingUp) {
+    repCount++;
+    if (repCount >= 10) goingUp = false;
+  } else {
+    repCount = 0;
+    goingUp = true;
+  }
+  if (repEl) repEl.textContent = repCount;
+}, 600);
+
+// Skeleton squat animation
+const leftThigh  = document.getElementById('left-thigh');
+const rightThigh = document.getElementById('right-thigh');
+const leftShin   = document.getElementById('left-shin');
+const rightShin  = document.getElementById('right-shin');
+const leftKnee   = document.getElementById('left-knee');
+const rightKnee  = document.getElementById('right-knee');
+
+let sqPhase = 0;
+const sqFrames = [
+  // standing
+  { lt:[104,108,88,150], rt:[136,108,152,150], ls:[88,150,86,190], rs:[152,150,154,190], lk:[88,150], rk:[152,150] },
+  // going down
+  { lt:[104,108,82,142], rt:[136,108,158,142], ls:[82,142,78,184], rs:[158,142,162,184], lk:[82,142], rk:[158,142] },
+  // squat bottom
+  { lt:[104,108,74,136], rt:[136,108,166,136], ls:[74,136,72,185], rs:[166,136,168,185], lk:[74,136], rk:[166,136] },
+  // going back up
+  { lt:[104,108,82,142], rt:[136,108,158,142], ls:[82,142,78,184], rs:[158,142,162,184], lk:[82,142], rk:[158,142] },
+];
+
+function setLine(el, x1, y1, x2, y2) {
+  el.setAttribute('x1', x1);
+  el.setAttribute('y1', y1);
+  el.setAttribute('x2', x2);
+  el.setAttribute('y2', y2);
+}
+function setCircle(el, cx, cy) {
+  el.setAttribute('cx', cx);
+  el.setAttribute('cy', cy);
+}
+
+setInterval(() => {
+  const f = sqFrames[sqPhase];
+  setLine(leftThigh,  f.lt[0], f.lt[1], f.lt[2], f.lt[3]);
+  setLine(rightThigh, f.rt[0], f.rt[1], f.rt[2], f.rt[3]);
+  setLine(leftShin,   f.ls[0], f.ls[1], f.ls[2], f.ls[3]);
+  setLine(rightShin,  f.rs[0], f.rs[1], f.rs[2], f.rs[3]);
+  setCircle(leftKnee,  f.lk[0], f.lk[1]);
+  setCircle(rightKnee, f.rk[0], f.rk[1]);
+  sqPhase = (sqPhase + 1) % sqFrames.length;
+}, 700);
+</script>
+
+</body>
+</html>
