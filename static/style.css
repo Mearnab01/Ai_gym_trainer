@@ -266,3 +266,14 @@ hr {
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 255, 170, 0.3);
 }
+
+.MuiButton-contained {
+    background-color: #00FFAA !important;
+    color: #04110D !important;
+    border-radius: 14px !important;
+    font-weight: 600 !important;
+}
+
+.MuiButton-contained:hover {
+    background-color: #00cc88 !important;
+}

@@ -2,19 +2,10 @@ import streamlit as st
 def render_workout_empty_state():
     st.markdown("""
         <div style="text-align: center; padding: 50px 30px; margin: 30px 0; border: 2px solid #3a3a3a; border-radius: 16px; background-color: #1e1e1e;">
-            <div style="margin-bottom: 20px;">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L15 8H9L12 2Z" fill="#4CAF50" stroke="#4CAF50" stroke-width="1.5"/>
-                    <path d="M12 22L9 16H15L12 22Z" fill="#4CAF50" stroke="#4CAF50" stroke-width="1.5"/>
-                    <rect x="3" y="8" width="18" height="8" rx="1" fill="#2e2e2e" stroke="#4CAF50" stroke-width="1.5"/>
-                    <circle cx="8" cy="12" r="1.5" fill="#4CAF50"/>
-                    <circle cx="16" cy="12" r="1.5" fill="#4CAF50"/>
-                </svg>
-            </div>
             <h3 style="margin: 0 0 10px 0; font-weight: 600; color: #e0e0e0;">No active workout</h3>
             <p style="font-size: 15px; color: #b0b0b0; line-height: 1.5;">
                 Select your exercise type, sets, and reps from the sidebar<br>
-                then click <span style="background: #4CAF50; color: #1e1e1e; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;">▶ Start Workout</span>
+                then click <span style="background: #00FFAA; color: #1e1e1e; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;"> Start Workout Session</span>
             </p>
             <div style="margin-top: 25px; font-size: 13px; color: #888; display: flex; justify-content: center; gap: 20px;">
                 <div style="display: flex; align-items: center; gap: 6px;">

@@ -33,8 +33,6 @@ STATIC_DIR  = os.path.join(os.getcwd(), "static")
 CSS_FILE    = os.path.join(STATIC_DIR, "style.css")
 FONT_FILE   = os.path.join(STATIC_DIR, "AdobeClean.otf")
 FONT_NAME   = "AdobeClean"
- 
-# RTC_CONFIG  = {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
 
 # ── Bootstrap ────────────────────────────────────────────
 def _bootstrap_page() -> None:
@@ -76,7 +74,7 @@ def render_main_content(workout_started: bool) -> None:
         render_workout_empty_state()
     else:
         render_workout_stream()
-        
+         
     st.divider()
     render_workout_history()
 # ── Main App Flow ─────────────────────────────────────────

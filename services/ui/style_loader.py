@@ -79,6 +79,16 @@ def inject_webrtc_styles() -> None:
                             font-family: 'AdobeClean', sans-serif !important;
                             letter-spacing: 0.05em !important;
                         }}
+                        button.MuiButton-root.MuiButton-containedPrimary {{
+                            background-color: #00FFAA !important;
+                            color: #04110D !important;
+                            border-radius: 12px !important;
+                            font-weight: 600 !important;
+                        }}
+
+                        button.MuiButton-root.MuiButton-containedPrimary:hover {{
+                            background-color: #00cc88 !important;
+                        }}
                     `;
                     doc.head.appendChild(style);
                 }} catch (e) {{
