@@ -40,43 +40,57 @@ def _bootstrap_page() -> None:
     st.set_page_config(
         page_title="Kinetic — AI Gym Coach",
         page_icon="⚡",
-        layout="centered",
+        layout="wide",
         initial_sidebar_state="expanded",
     )
     inject_local_font(FONT_FILE, FONT_NAME)
     load_css(CSS_FILE)
 
 
-# ── Sidebar ──────────────────────────────────────────────
-def render_sidebar(workout_started: bool) -> None:
+# ── Left Sidebar ──────────────────────────────────────────────
+def render_left_sidebar(workout_started: bool) -> None:
     with st.sidebar:
-        if st.session_state['username']:
-            st.markdown(f"Logged in as: **{st.session_state['username']}**")
-    
-        st.divider()
-        
         if not workout_started:
             render_workout_planner()
         else:
             render_active_workout_session()
-            
-        if workout_started:
-            st.divider()
-            render_workout_metrics()
-            
-            
-# ── Main Content ──────────────────────────────────────────────
-def render_main_content(workout_started: bool) -> None:
-    render_app_header()
-    render_coach_feedback()
+        
+        st.divider()
+        if st.session_state['username']:
+            st.markdown(f"Logged in as: **{st.session_state['username']}**")
 
-    if not workout_started:
-        render_workout_empty_state()
-    else:
-        render_workout_stream()
+            if st.button(
+                "Logout",
+                type="secondary",
+                icon=":material/logout:",
+                width="stretch"
+            ):
+                st.session_state.clear()
+                st.rerun()
+
+            
+            
+# ── Main Content + Right Sidebar ──────────────────────────────
+def render_main_content(workout_started: bool) -> None:
+    
+    
+    main_content, right_space = st.columns([6, 2.3], gap="medium")
+
+    with main_content:
+        render_app_header()
+        render_coach_feedback()
+        if not workout_started:
+            render_workout_empty_state()
+        else:
+            render_workout_stream()
          
-    st.divider()
-    render_workout_history()
+        st.divider()
+        render_workout_history()
+        
+    with right_space:
+        if workout_started:
+           render_workout_metrics()
+                
 # ── Main App Flow ─────────────────────────────────────────
 def main():
     try:
@@ -97,7 +111,7 @@ def main():
     workout_started = st.session_state.get('workout_started', False)
     
     # 1. Workout Planner or Active Session
-    render_sidebar(workout_started)
+    render_left_sidebar(workout_started)
     
     # 2. Main content area
     render_main_content(workout_started)

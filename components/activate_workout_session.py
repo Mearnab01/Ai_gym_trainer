@@ -14,7 +14,7 @@ def _render_active_workout_session():
         st.session_state['workout_started'] = False
         st.rerun()
     
-    
+     
     
 def render_active_workout_session():
     st.header("Active Workout Session")

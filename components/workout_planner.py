@@ -1,5 +1,6 @@
 import streamlit as st
 from services.config.workout_config import EXERCISE_OPTIONS
+import time
 
 def _render_workout_planner():
     plan_exercise = st.selectbox("Select Exercise", options=EXERCISE_OPTIONS, key="plan_exercise")
@@ -18,6 +19,8 @@ def _render_workout_planner():
         st.session_state['reps_per_set'] = int(plan_reps)
         
         st.session_state['reps'] = 0
+        
+        
         st.rerun()
         
         

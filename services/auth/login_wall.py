@@ -18,13 +18,15 @@ def render_login_wall():
 
     # ── Form ───────────────────────────────────────────────
     
-    with st.form("login_form", clear_on_submit=False):
-        username = st.text_input(
-            "Username",
-            placeholder="e.g. arnab_1028",
-            label_visibility="visible",
-        )    
-        submitted = st.form_submit_button("Start Training", width="stretch")
+    left, center, right = st.columns([1, 4, 1])
+    with center:
+        with st.form("login_form", clear_on_submit=False):
+            username = st.text_input(
+                "Username",
+                placeholder="e.g. arnab_1028",
+                label_visibility="visible",
+            )    
+            submitted = st.form_submit_button("Start Training", width="stretch")
         
 
     # ── Validation & auth ──────────────────────────────────
