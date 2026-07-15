@@ -1,7 +1,7 @@
 import streamlit as st
 
 
-def _render_app_header() -> None:
+def render_app_header() -> None:
     st.markdown("""
         <style>
         .header-gradient {
@@ -31,6 +31,3 @@ def _render_app_header() -> None:
         - 💪 **Proactive Alerts**: Automatic corrections and tips
         """)
         
-        
-def render_app_header() -> None:
-    return _render_app_header()

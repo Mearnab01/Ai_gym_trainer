@@ -1,7 +1,7 @@
 import streamlit as st
 
 
-def _render_workout_metrics():
+def render_workout_metrics():
     exercise = st.session_state.get("exercise_type")
     total_reps = st.session_state.get("reps")
     current_set_reps = st.session_state.get("current_set_reps")
@@ -45,10 +45,4 @@ def _render_workout_metrics():
         st.metric("Front Knee Angle", f"{st.session_state.front_knee_angle}°")
         st.metric("Torso Angle", f"{st.session_state.torso_angle}°")
         st.metric("Balance Status", st.session_state.balance_status)
-    
-
-
-
-def render_workout_metrics():
-    st.header("Progress Overview")
-    _render_workout_metrics()
+     

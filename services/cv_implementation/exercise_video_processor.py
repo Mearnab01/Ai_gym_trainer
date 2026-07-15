@@ -1,4 +1,5 @@
 import os
+from time import time
 import cv2
 import av
 import numpy as np
@@ -15,7 +16,7 @@ from detectors.biceps_curl import BicepsCurlDetector
 from detectors.shoulder_press import ShoulderPressDetector
 from detectors.lunges import LungesDetector
 
-from services.config.workout_config import SEGMENT_CONNECTIONS, SEGMENT_COLORS
+from services.config.workout_config import POSE_CONNECTIONS
 from services.cv_implementation.frame_processor import AngleSmoother
 
 class VideoProcessorClass(VideoProcessorBase):
@@ -73,18 +74,16 @@ class VideoProcessorClass(VideoProcessorBase):
     def _draw_skeleton(self, img, landmarks):
         h, w = img.shape[:2]
  
-        # Draw each body segment in its own colour
-        for segment, connections in SEGMENT_CONNECTIONS.items():
-            color = SEGMENT_COLORS[segment]
-            thickness = 2 if segment == "face" else 3
-            for s, e in connections:
+        for s, e in POSE_CONNECTIONS:
                 p1, p2 = landmarks[s], landmarks[e]
-                vis_thresh = 0.5 if segment == "face" else 0.65
+                vis_thresh = 0.65
                 if p1.visibility > vis_thresh and p2.visibility > vis_thresh:
                     cv2.line(img,
-                             (int(p1.x * w), int(p1.y * h)),
-                             (int(p2.x * w), int(p2.y * h)),
-                             color, thickness, cv2.LINE_AA)
+                            (int(p1.x * w), int(p1.y * h)),
+                            (int(p2.x * w), int(p2.y * h)),
+                            (74, 222, 128),
+                            2,
+                            cv2.LINE_AA)
  
         # Joint dots — white with a subtle coloured ring for key joints
         key_joints = {11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28}
@@ -153,8 +152,11 @@ class VideoProcessorClass(VideoProcessorBase):
             data = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         )
         
-        self._frame_timestamps_ms += 30
-        result = self._landmarker.detect_for_video(mp_image, self._frame_timestamps_ms)
+        self._frame_timestamps_ms +=30
+        result = self._landmarker.detect_for_video(
+            mp_image, 
+            self._frame_timestamps_ms
+        )
         
         if result.pose_landmarks:
             landmarks = result.pose_landmarks[0]

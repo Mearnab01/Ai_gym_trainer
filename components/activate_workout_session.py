@@ -1,7 +1,7 @@
 import streamlit as st
 
 
-def _render_active_workout_session():
+def render_active_workout_session():
     exercise = st.session_state.get("exercise_type")
     sets = st.session_state.get("target_sets")
     reps = st.session_state.get("reps_per_set")
@@ -15,8 +15,4 @@ def _render_active_workout_session():
         st.rerun()
     
      
-    
-def render_active_workout_session():
-    st.header("Active Workout Session")
-    _render_active_workout_session()
     

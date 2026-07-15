@@ -26,7 +26,7 @@ def render_login_wall():
                 placeholder="e.g. arnab_1028",
                 label_visibility="visible",
             )    
-            submitted = st.form_submit_button("Start Training", width="stretch")
+            submitted = st.form_submit_button("Start Gym With AI ", width="stretch")
         
 
     # ── Validation & auth ──────────────────────────────────

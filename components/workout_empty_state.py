@@ -1,8 +1,7 @@
 import streamlit as st
 def render_workout_empty_state():
     st.markdown("""
-        <div style="text-align: center; padding: 50px 30px; margin: 30px 0; border: 2px solid #3a3a3a; border-radius: 16px; background-color: #1e1e1e;">
-            <h3 style="margin: 0 0 10px 0; font-weight: 600; color: #e0e0e0;">No active workout</h3>
+        <div style="text-align: center; padding: 30px 20px; margin: 20px 0; border: 2px solid #3a3a3a; border-radius: 16px; background-color: #1e1e1e;">
             <p style="font-size: 15px; color: #b0b0b0; line-height: 1.5;">
                 Select your exercise type, sets, and reps from the sidebar<br>
                 then click <span style="background: #00FFAA; color: #1e1e1e; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;"> Start Workout Session</span>

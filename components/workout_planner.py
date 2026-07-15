@@ -2,7 +2,8 @@ import streamlit as st
 from services.config.workout_config import EXERCISE_OPTIONS
 import time
 
-def _render_workout_planner():
+def render_workout_planner():
+    st.header("Plan Your Workout")
     plan_exercise = st.selectbox("Select Exercise", options=EXERCISE_OPTIONS, key="plan_exercise")
     plan_sets = st.number_input("Sets", min_value=1, max_value=50, key="plan_sets", step=1)
     plan_reps = st.number_input("Reps", min_value=1, max_value=100, key="plan_reps", step=1)
@@ -20,11 +21,11 @@ def _render_workout_planner():
         
         st.session_state['reps'] = 0
         
+        st.session_state['set_cycle_started_at'] = time.time()
+        st.session_state['last_saved_sets_completed'] = 0
+        st.session_state['last_notified_sets_completed'] = 0
+        st.session_state['last_notified_workout_complete'] = False
         
         st.rerun()
         
         
-        
-def render_workout_planner():
-    st.header("Plan Your Workout")
-    _render_workout_planner()

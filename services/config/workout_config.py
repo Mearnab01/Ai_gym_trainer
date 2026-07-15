@@ -42,26 +42,8 @@ _RIGHT_LEG = [
 ]
  
 # Flat list for any code that just needs (start, end) pairs
-POSE_CONNECTIONS = _FACE + _TORSO + _LEFT_ARM + _RIGHT_ARM + _LEFT_LEG + _RIGHT_LEG
- 
-# Per-segment BGR colours — used by frame_processor for coloured skeleton rendering
-SEGMENT_COLORS = {
-    "face":      (160, 160, 160),   # grey   — face is secondary info
-    "torso":     ( 74, 222, 128),   # green  — core
-    "left_arm":  ( 96, 165, 250),   # blue
-    "right_arm": ( 96, 165, 250),   # blue
-    "left_leg":  (167, 139, 250),   # violet
-    "right_leg": (167, 139, 250),   # violet
-}
- 
-SEGMENT_CONNECTIONS = {
-    "face":      _FACE,
-    "torso":     _TORSO,
-    "left_arm":  _LEFT_ARM,
-    "right_arm": _RIGHT_ARM,
-    "left_leg":  _LEFT_LEG,
-    "right_leg": _RIGHT_LEG,
-}
+POSE_CONNECTIONS = _TORSO + _LEFT_ARM + _RIGHT_ARM + _LEFT_LEG + _RIGHT_LEG
+
 
 
 METRICS_FIELDS = {
